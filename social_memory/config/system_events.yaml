@@ -1,0 +1,4 @@
+system_events:
+  battery:
+    battery_low_detected: false
+    battery_level: 0.0
