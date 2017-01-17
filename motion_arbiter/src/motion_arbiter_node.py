@@ -10,7 +10,7 @@ import operator
 from threading import Thread
 
 from std_msgs.msg import String, Bool
-from mhri_msgs.msg import MotionRenderAction, MotionRenderGoal, GazeFocusing
+from mhri_msgs.msg import RenderMotionAction, RenderMotionGoal #, GazeFocusing
 from mhri_msgs.srv import EmptyResult
 from mhri_msgs.srv import ReadData, ReadDataRequest
 
@@ -43,7 +43,7 @@ class MotionArbiter:
 		# self.current_emotion_intensity = 1.0
 
 		rospy.wait_for_service('idle_motion/is_ready')
-		self.pub_set_idle_motion = rospy.Publisher('idle_motion/set_status', Bool, queue_size=10)		
+		self.pub_set_idle_motion = rospy.Publisher('idle_motion/set_status', Bool, queue_size=10)
 
 		rospy.wait_for_service('/social_memory/write_data')
 
