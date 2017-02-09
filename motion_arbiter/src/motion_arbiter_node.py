@@ -10,8 +10,9 @@ import operator
 from threading import Thread
 
 from std_msgs.msg import String, Bool
+from mhri_msgs.msg import Reply
 from mhri_msgs.msg import RenderMotionAction, RenderMotionGoal #, GazeFocusing
-from mhri_msgs.srv import EmptyResult
+# from mhri_msgs.srv import EmptyResult
 from mhri_msgs.srv import ReadData, ReadDataRequest
 
 class OverridingType:
@@ -30,33 +31,34 @@ class MotionQueueData:
 class MotionArbiter:
 	def __init__(self):
 		self.is_rendering = False
-		rospy.sleep(1)
+		# rospy.sleep(1)
 
-		rospy.Subscriber('mhri_dialog/reply', String, self.handle_domain_reply)
-		self.renderer_client = actionlib.SimpleActionClient('motion_renderer/render_action', MotionRenderAction)
-		self.renderer_client.wait_for_server()
+		rospy .Subscriber('reply', Reply, self.handle_domain_reply)
+		self.renderer_client = actionlib.SimpleActionClient('render_motion', RenderMotionAction)
 
-		self.gazefocus_pub = rospy.Publisher('gaze_focusing', GazeFocusing, queue_size=5)
+		rospy.loginfo('Waiting for action server to start.')
+
+		if not self.renderer_client.wait_for_server():
+			quit()
+
+		# self.gazefocus_pub = rospy.Publisher('gaze_focusing', GazeFocusing, queue_size=5)
 
 		# rospy.Subscriber('emotion_status', EmotionStatus, self.handle_emotion_status, queue_size=10)
 		# self.current_emotion = 'neutral'
 		# self.current_emotion_intensity = 1.0
 
-		rospy.wait_for_service('idle_motion/is_ready')
-		self.pub_set_idle_motion = rospy.Publisher('idle_motion/set_status', Bool, queue_size=10)
+		# rospy.wait_for_service('idle_motion/is_ready')
+		# self.pub_set_idle_motion = rospy.Publisher('idle_motion/set_status', Bool, queue_size=10)
 
-		rospy.wait_for_service('/social_memory/write_data')
+		# rospy.wait_for_service('/social_memory/write_data')
 
 		self.motion_queue = Queue.Queue(10)
-		self.pub_set_idle_motion.publish(True)
+		# self.pub_set_idle_motion.publish(True)
 
 		self.t1 = Thread(target=self.handle_motion_queue)
 		self.t1.start()
 
 		rospy.loginfo("[%s] Initialized."%rospy.get_name())
-
-
-
 
 
 	def handle_motion_queue(self):
@@ -217,6 +219,6 @@ class MotionArbiter:
 		rospy.logdebug("Motion Queue Saved.")
 
 if __name__ == '__main__':
-	rospy.init_node('motion_arbiter_node', anonymous=False)
+	rospy.init_node('motion_arbiter', anonymous=False)
 	m = MotionArbiter()
 	rospy.spin()

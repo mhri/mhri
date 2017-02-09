@@ -7,33 +7,33 @@ import random
 import rospy
 import actionlib
 
-from mhri_msgs.msg import MotionRenderAction, MotionRenderFeedback, MotionRenderResult
-from mhri_msgs.msg import SpeechActionAction, SpeechActionGoal
-from mhri_msgs.msg import GestureActionAction, GestureActionGoal
-from mhri_msgs.srv import EmptyResult, GetInstalledGestures
-from mhri_msgs.msg import SetFacialExpression
+from mhri_msgs.msg import RenderMotionAction, RenderMotionFeedback, RenderMotionResult
+# from mhri_msgs.msg import SpeechActionAction, SpeechActionGoal
+# from mhri_msgs.msg import GestureActionAction, GestureActionGoal
+# from mhri_msgs.srv import EmptyResult, GetInstalledGestures
+# from mhri_msgs.msg import SetFacialExpression
 
 from std_msgs.msg import Bool
 
 
 class MotionRenderer:
 	def __init__(self):
-		self.speech_client = actionlib.SimpleActionClient('speech_action', SpeechActionAction)
-		self.speech_client.wait_for_server()
+		# self.speech_client = actionlib.SimpleActionClient('speech_action', SpeechActionAction)
+		# self.speech_client.wait_for_server()
+		#
+		# self.gesture_client = actionlib.SimpleActionClient('run_gesture', GestureActionAction)
+		# self.gesture_client.wait_for_server()
+		#
+		# self.pub_face_emotion = rospy.Publisher('set_facial_expression', SetFacialExpression, queue_size=5)
+		#
+		# rospy.wait_for_service('get_installed_gestures')
+		# self.get_motion = rospy.ServiceProxy('get_installed_gestures', GetInstalledGestures)
+		# json_data = self.get_motion()
+		# self.motion_tag = json.loads(json_data.gestures)
+		#
+		# rospy.loginfo('[%s] Success to get motion_tag from gesture server'%rospy.get_name())
 
-		self.gesture_client = actionlib.SimpleActionClient('run_gesture', GestureActionAction)
-		self.gesture_client.wait_for_server()
-
-		self.pub_face_emotion = rospy.Publisher('set_facial_expression', SetFacialExpression, queue_size=5)
-
-		rospy.wait_for_service('get_installed_gestures')
-		self.get_motion = rospy.ServiceProxy('get_installed_gestures', GetInstalledGestures)
-		json_data = self.get_motion()
-		self.motion_tag = json.loads(json_data.gestures)
-
-		rospy.loginfo('[%s] Success to get motion_tag from gesture server'%rospy.get_name())
-
-		self.server = actionlib.SimpleActionServer('motion_renderer/render_action', MotionRenderAction, self.execute_callback, False)
+		self.server = actionlib.SimpleActionServer('render_motion', RenderMotionAction, self.execute_callback, False)
 		self.server.register_preempt_callback(self.preempt_callback)
 		self.server.start()
 
@@ -162,6 +162,6 @@ class MotionRenderer:
 
 
 if __name__ == '__main__':
-	rospy.init_node('motion_renderer_node', anonymous=False)
+	rospy.init_node('motion_renderer', anonymous=False)
 	m = MotionRenderer()
 	rospy.spin()
