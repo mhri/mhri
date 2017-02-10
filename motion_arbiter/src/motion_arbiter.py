@@ -11,7 +11,7 @@ from threading import Thread
 
 from std_msgs.msg import String, Bool
 from mhri_msgs.msg import Reply
-from mhri_msgs.msg import RenderMotionAction, RenderMotionGoal #, GazeFocusing
+from mhri_msgs.msg import RenderSceneAction, RenderSceneGoal #, GazeFocusing
 # from mhri_msgs.srv import EmptyResult
 from mhri_msgs.srv import ReadData, ReadDataRequest
 

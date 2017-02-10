@@ -7,7 +7,8 @@ import random
 import rospy
 import actionlib
 
-from mhri_msgs.msg import RenderMotionAction, RenderMotionFeedback, RenderMotionResult
+from mhri_msgs.msg import RenderSceneAction, RenderSceneFeedback, RenderSceneResult
+from mhri_msgs.msg import RenderItemAction, RenderItemFeedback, RenderItemResult
 # from mhri_msgs.msg import SpeechActionAction, SpeechActionGoal
 # from mhri_msgs.msg import GestureActionAction, GestureActionGoal
 # from mhri_msgs.srv import EmptyResult, GetInstalledGestures
@@ -18,14 +19,18 @@ from std_msgs.msg import Bool
 
 class MotionRenderer:
 	def __init__(self):
-		# self.speech_client = actionlib.SimpleActionClient('speech_action', SpeechActionAction)
-		# self.speech_client.wait_for_server()
+		self.speech_client = actionlib.SimpleActionClient('render_speech', RenderItemAction)
+		self.speech_client.wait_for_server()
 		#
-		# self.gesture_client = actionlib.SimpleActionClient('run_gesture', GestureActionAction)
-		# self.gesture_client.wait_for_server()
+		self.gesture_client = actionlib.SimpleActionClient('render_gesture', RenderItemAction)
+		self.gesture_client.wait_for_server()
 		#
-		# self.pub_face_emotion = rospy.Publisher('set_facial_expression', SetFacialExpression, queue_size=5)
+		self.facial_client = actionlib.SimpleActionClient('render_facial_expression', RenderItemAction)
+		self.facial_client.wait_for_server()
 		#
+		self.sound_client = actionlib.SimpleActionClient('render_sound', RenderItemAction)
+		self.sound_client.wait_for_server()
+
 		# rospy.wait_for_service('get_installed_gestures')
 		# self.get_motion = rospy.ServiceProxy('get_installed_gestures', GetInstalledGestures)
 		# json_data = self.get_motion()
@@ -33,7 +38,7 @@ class MotionRenderer:
 		#
 		# rospy.loginfo('[%s] Success to get motion_tag from gesture server'%rospy.get_name())
 
-		self.server = actionlib.SimpleActionServer('render_motion', RenderMotionAction, self.execute_callback, False)
+		self.server = actionlib.SimpleActionServer('render_motion', RenderSceneAction, self.execute_callback, False)
 		self.server.register_preempt_callback(self.preempt_callback)
 		self.server.start()
 
