@@ -9,13 +9,7 @@ import actionlib
 
 from mhri_msgs.msg import RenderSceneAction, RenderSceneFeedback, RenderSceneResult
 from mhri_msgs.msg import RenderItemAction, RenderItemFeedback, RenderItemResult
-# from mhri_msgs.msg import SpeechActionAction, SpeechActionGoal
-# from mhri_msgs.msg import GestureActionAction, GestureActionGoal
-# from mhri_msgs.srv import EmptyResult, GetInstalledGestures
-# from mhri_msgs.msg import SetFacialExpression
-
-from std_msgs.msg import Bool
-
+from mhri_msgs.srv import GetInstalledGestures
 
 class MotionRenderer:
 	def __init__(self):
@@ -24,29 +18,34 @@ class MotionRenderer:
 		#
 		self.gesture_client = actionlib.SimpleActionClient('render_gesture', RenderItemAction)
 		self.gesture_client.wait_for_server()
+
+		try:
+			rospy.wait_for_service('get_installed_gestures', timeout=1)
+		except rospy.exceptions.ROSException as e:
+			rospy.logerr(e)
+			quit()
+
+		self.get_motion = rospy.ServiceProxy('get_installed_gestures', GetInstalledGestures)
+		json_data = self.get_motion()
+		self.motion_tag = json.loads(json_data.gestures)
+
+		rospy.loginfo('[%s] Success to get motion_tag from gesture server'%rospy.get_name())
+
 		#
 		self.facial_client = actionlib.SimpleActionClient('render_facial_expression', RenderItemAction)
 		self.facial_client.wait_for_server()
 		#
 		self.sound_client = actionlib.SimpleActionClient('render_sound', RenderItemAction)
 		self.sound_client.wait_for_server()
-
-		# rospy.wait_for_service('get_installed_gestures')
-		# self.get_motion = rospy.ServiceProxy('get_installed_gestures', GetInstalledGestures)
-		# json_data = self.get_motion()
-		# self.motion_tag = json.loads(json_data.gestures)
 		#
-		# rospy.loginfo('[%s] Success to get motion_tag from gesture server'%rospy.get_name())
-
-		self.server = actionlib.SimpleActionServer('render_motion', RenderSceneAction, self.execute_callback, False)
+		self.server = actionlib.SimpleActionServer('render_scene', RenderSceneAction, self.execute_callback, False)
 		self.server.register_preempt_callback(self.preempt_callback)
 		self.server.start()
-
-
-		self.is_speaking_now = False
-		self.is_playing_now = False
-		self.is_gesture_only = False
-		self.sync_count_gesture = 0
+		#
+		self.is_rendering_speech = False
+		self.is_rendering_gesture = False
+		self.is_rendering_facial_expression = False
+		self.is_rendering_sound = False
 
 		rospy.loginfo("[%s] Initialized."%rospy.get_name())
 

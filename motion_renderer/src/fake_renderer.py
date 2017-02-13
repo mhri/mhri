@@ -6,18 +6,37 @@ import rospy
 import actionlib
 
 from mhri_msgs.msg import RenderItemAction, RenderItemResult, RenderItemFeedback
-
+from mhri_msgs.srv import GetInstalledGestures, GetInstalledGesturesResponse
 
 class FakeMotionRender:
 
     def __init__(self):
-        rospy.init_node('fake_renderer', anonymous=False)
+        rospy.init_node('fake_renderer', anonymous=True)
 
         try:
             topic_name = rospy.get_param('~topic_name')
         except KeyError as e:
-            print('[ERROR] Needed parameter for (node_name, topic_name)...')
+            print('[ERROR] Needed parameter for (topic_name)...')
             quit()
+
+        if 'fake_render_gesture' in rospy.get_name():
+            self.GetInstalledGesturesService = rospy.Service(
+                "get_installed_gestures",
+                GetInstalledGestures,
+                self.handle_get_installed_gestures
+            )
+
+            self.motion_list = {
+                'neutral': ['neutral_motion1'],
+                'encourge': ['encourge_motion1'],
+                'attention': ['attention_motion1'],
+                'consolation': ['consolation_motion1'],
+                'greeting': ['greeting_motion1'],
+                'waiting': ['waiting_motion1'],
+                'advice': ['advice_motion1'],
+                'praise': ['praise_motion1'],
+                'command': ['command_motion1'],
+            }
 
         self.server = actionlib.SimpleActionServer(
             topic_name, RenderItemAction, self.execute_callback, False)
@@ -25,6 +44,11 @@ class FakeMotionRender:
 
         rospy.loginfo('[%s] initialized...' % rospy.get_name())
         rospy.spin()
+
+    def handle_get_installed_gestures(self, req):
+        result = json.dumps(self.motion_list)
+        return GetInstalledGesturesResponse(result)
+
 
     def execute_callback(self, goal):
         rospy.loginfo('%s rendering requested...' % rospy.get_name())
