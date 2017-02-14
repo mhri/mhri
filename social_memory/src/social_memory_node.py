@@ -71,8 +71,8 @@ class main:
 
 		# Topics & Services & ActionServer
 		self.pub_raise_events = rospy.Publisher('raise_events', RaiseEvents, queue_size=1)
-		self.srv_read_data = rospy.Service('read_data', ReadData, self.handle_read_data)
-		self.srv_write_data = rospy.Service('write_data', WriteData, self.handle_write_data)
+		self.srv_read_data = rospy.Service('/social_memory/read_data', ReadData, self.handle_read_data)
+		self.srv_write_data = rospy.Service('/social_memory/write_data', WriteData, self.handle_write_data)
 		self.wait_event_server = actionlib.SimpleActionServer('wait_event', WaitEventAction, self.handle_wait_event, auto_start=False)
 		self.wait_event_server.start()
 
