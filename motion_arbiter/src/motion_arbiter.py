@@ -38,14 +38,16 @@ class SceneQueueData:
     overriding = 0
 
     def __str__(self):
-        print self.sm
-        print self.say
-        print self.gaze
-        print self.pointing
-        print self.sound
-        print self.expression
-        print self.emotion
-        print self.overriding
+        rospy.loginfo('='*10)
+        print ' [SM]        : ',  self.sm
+        print ' [SAY]       : ', self.say
+        print ' [GAZE]      : ', self.gaze
+        print ' [POINTING]  : ', self.pointing
+        print ' [SOUND]     : ', self.sound
+        print ' [EXPRESSION]: ', self.expression
+        print ' [EMOTION]   : ', self.emotion
+        print ' [OVERRIDING]: ', self.overriding
+        rospy.loginfo('-'*10)
         return ''
 
 
@@ -101,7 +103,12 @@ class MotionArbiter:
         scene_item.overriding = 0
 
         for tag in tags:
-            index = recv_msg.index(tag)
+            tag_msg = recv_msg
+            for other_tag in tags:
+                if other_tag != tag:
+                    tag_msg.replace(other_tag, '')
+
+            index = tag_msg.index(tag)
             recv_msg = recv_msg.replace(tag, '')
 
             tag = tag.lstrip('<')
