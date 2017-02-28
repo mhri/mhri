@@ -6,6 +6,8 @@ project(motion_renderer)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   rospy
+  rqt_gui
+  rqt_gui_py  
 )
 
 ## System dependencies are found with CMake's conventions
