@@ -15,7 +15,7 @@ social_events:
 
   # 음성 인식
   speech_recognition:
-    speed_recognized: false
+    speech_recognized: false
     recognized_word: ''
     confidence: 0
 
