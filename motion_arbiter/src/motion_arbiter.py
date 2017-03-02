@@ -14,6 +14,7 @@ from mhri_msgs.msg import Reply
 from mhri_msgs.msg import RenderSceneAction, RenderSceneGoal, RenderItemGoal  # , GazeFocusing
 # from mhri_msgs.srv import EmptyResult
 from mhri_msgs.srv import ReadData, ReadDataRequest
+from mhri_msgs.msg import LogItem
 
 MAX_QUEUE_SIZE = 10
 TIME_FOR_CHARACTER = 0.2
@@ -35,6 +36,7 @@ class SceneQueueData:
     sound = {}
     expression = {}
     emotion = ''
+    log = ''
     overriding = 0
 
     def __str__(self):
@@ -47,6 +49,7 @@ class SceneQueueData:
         print ' [EXPRESSION]: ', self.expression
         print ' [EMOTION]   : ', self.emotion
         print ' [OVERRIDING]: ', self.overriding
+        print ' [LOG]       : ', self.log
         rospy.loginfo('-'*10)
         return ''
 
@@ -72,6 +75,7 @@ class MotionArbiter:
             quit()
 
         rospy.Subscriber('reply', Reply, self.handle_domain_reply)
+        self.pub_log_item = rospy.Publisher('log', LogItem, queue_size=10)
 
         # self.gazefocus_pub = rospy.Publisher('gaze_focusing', GazeFocusing, queue_size=5)
 
@@ -137,6 +141,8 @@ class MotionArbiter:
             #         scene_item.emotion[tag[1].strip().split(':')[0]] = float(tag[1].strip().split(':')[1])
             elif tag[0].strip() == 'overriding':
                 scene_item.overriding = int(tag[1].strip())
+            elif tag[0].strip() == 'log':
+                scene_item.log = tag[1].strip()
 
         scene_item.say['render'] = recv_msg.strip()
         scene_item.say['offset'] = 0.0
@@ -168,7 +174,6 @@ class MotionArbiter:
                     goal = RenderSceneGoal()
                     scene_dict = {}
                     scene_item = self.scene_queue.get()
-                                        
 
                     if scene_item.pointing != {}:
                         rospy.wait_for_service('/social_memory/read_data')
@@ -218,7 +223,18 @@ class MotionArbiter:
                     expression = {}
                     emotion = ''
                     overriding = 0
+                    log = ''
                     '''
+
+                    if scene_item.log != '':
+                        msg_log_item = LogItem()
+                        log_item = scene_item.log.split('/')
+                        for data in log_item:
+                            msg_log_item.log_items.append(data)
+
+                        msg_log_item.header.stamp = rospy.Time.now()
+                        self.pub_log_item.publish(msg_log_item)
+
 
                     scene_dict['say'] = scene_item.say
                     scene_dict['sound'] = scene_item.sound
