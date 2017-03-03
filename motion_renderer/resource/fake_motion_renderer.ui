@@ -15,7 +15,7 @@
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout">
    <item>
-    <widget class="QOpenGLWidget" name="glWidget"/>
+    <layout class="QVBoxLayout" name="verticalLayout"/>
    </item>
   </layout>
  </widget>

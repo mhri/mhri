@@ -4,11 +4,12 @@
 import rospy
 import rospkg
 import os
+import vtk
 
 from qt_gui.plugin import Plugin
 from python_qt_binding import loadUi
-from python_qt_binding.QtWidgets import QWidget
-from python_qt_binding.QtGui import QSurfaceFormat, QOpenGLVersionProfile
+from python_qt_binding.QtWidgets import QWidget, QFrame
+from .QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
 
 class FakeMotionRendererPlugin(Plugin):
@@ -26,26 +27,29 @@ class FakeMotionRendererPlugin(Plugin):
 
         context.add_widget(self._widget)
 
-        self.color = 0.0
+        self.frame = QFrame()
+        self.vtkWidget = QVTKRenderWindowInteractor(self.frame)
+        self._widget.verticalLayout.addWidget(self.vtkWidget)
 
-        self._widget.glWidget.paintGL = self.paintGL
-        self._widget.glWidget.timerEvent = self.timerEvent
-        self._widget.glWidget.startTimer(40)
+        self.ren = vtk.vtkRenderer()
+        self.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
+        self.iren = self.vtkWidget.GetRenderWindow().GetInteractor()
 
-        self.gl = self._widget.glWidget.context().versionFunctions(QOpenGLVersionProfile((QSurfaceFormat())))
-        self.gl.initializeOpenGLFunctions()
+        source = vtk.vtkSphereSource()
+        source.SetCenter(0, 0, 0)
+        source.SetRadius(0.1)
 
-    def timerEvent(self, event):
-        self._widget.glWidget.update()
+        mapper = vtk.vtkPolyDataMapper()
+        mapper.SetInputConnection(source.GetOutputPort())
 
-    def paintGL(self):
+        actor = vtk.vtkActor()
+        actor.SetMapper(mapper)
 
-        self.color = self.color + 0.01
-        if self.color >= 1.0:
-            self.color = 0.0
-                    
-        self.gl.glClearColor(1.0, self.color, 1.0, 1.0)
-        self.gl.glClear(self.gl.GL_COLOR_BUFFER_BIT | self.gl.GL_DEPTH_BUFFER_BIT)
+        self.ren.AddActor(actor)
+
+        self.ren.ResetCamera()
+        self.iren.Initialize()
+
 
     def shutdown_plugin(self):
         pass
