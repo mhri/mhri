@@ -26,11 +26,15 @@ class FakeMotionRendererPlugin(Plugin):
         ui_file = os.path.join(rospkg.RosPack().get_path('motion_renderer'), 'resource', 'fake_motion_renderer.ui')
         loadUi(ui_file, self._widget)
 
+        self._widget.resizeEvent = self.widget_resized
         context.add_widget(self._widget)
+
 
         self.frame = QFrame()
         self.vtkWidget = QVTKRenderWindowInteractor(self.frame)
         self._widget.verticalLayout.addWidget(self.vtkWidget)
+
+        self._widget.update()
 
         self.ren = vtk.vtkRenderer()
         self.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
@@ -42,7 +46,6 @@ class FakeMotionRendererPlugin(Plugin):
         self.vtkWidget.GetRenderWindow().SetMultiSamples(32)
 
 
-
         self.eye_ball = []
         self.eye_ball.append(self.add_eye_ball(pose=[-0.8, 0.0, 0.0], orientation=[90, 0, 0]))
         self.eye_ball.append(self.add_eye_ball(pose=[0.8, 0.0, 0.0], orientation=[90, 0, 0]))
@@ -50,6 +53,10 @@ class FakeMotionRendererPlugin(Plugin):
         self.eye_lid = []
         self.eye_lid.append(self.add_eye_lid(pose=[-0.8, 0.0, 0.0], orientation=[90, 0, 0]))
         self.eye_lid.append(self.add_eye_lid(pose=[0.8, 0.0, 0.0], orientation=[90, 0, 0]))
+
+        self.eye_brow = []
+        self.eye_brow.append(self.add_eye_brow(pose=[-0.8, 0.55, 0.4], orientation=[0, 0, 0]))
+        self.eye_brow.append(self.add_eye_brow(pose=[0.8, 0.55, 0.4], orientation=[0, 0, 0]))
 
 
         # Initial Pose and Rotation for Eyeball
@@ -63,15 +70,57 @@ class FakeMotionRendererPlugin(Plugin):
         self.eye_lid[1][1].RotateX(30)
 
 
-        self.ren.SetBackground(0.1, 0.1, 0.2)
+        self.subtitle = vtk.vtkTextActor()
+        self.subtitle.SetInput('대화가 나타남.')
+
+        self.subtitle.GetTextProperty().SetFontFamily(vtk.VTK_FONT_FILE)
+        self.subtitle.GetTextProperty().SetFontFile('/usr/share/fonts/truetype/nanum/NanumBarunGothic.ttf')
+        self.subtitle.GetTextProperty().SetColor(1, 1, 1)
+        self.subtitle.GetTextProperty().SetJustificationToCentered()
+        self.subtitle.GetTextProperty().SetBackgroundColor(0.5, 0.2, 1)
+        self.subtitle.GetTextProperty().ShadowOn()
+        self.subtitle.GetTextProperty().SetFontSize(26)
+        self.subtitle.GetProperty().SetOpacity(0.5)
+
+
+        self.ren.AddActor2D(self.subtitle)
+
+
+        self.ren.SetBackground(0.1, 0.2, 0.3)
         camera = vtk.vtkCamera();
-        camera.SetPosition(0, 0, 10);
+        camera.SetPosition(0, 0, 5);
         camera.SetFocalPoint(0, 0, 0);
 
-        # self.iren.RemoveAllObservers()
+        self.iren.RemoveAllObservers()
         self.ren.SetActiveCamera(camera);
         self.iren.Initialize()
         self.iren.Start()
+
+    def widget_resized(self, event):
+        self.subtitle.SetDisplayPosition(
+            self.vtkWidget.width()/2, self.vtkWidget.height()/16)
+
+
+    def add_eye_brow(self, pose, orientation):
+        cube = vtk.vtkCubeSource()
+        cube.SetXLength(1.0)
+        cube.SetYLength(0.12)
+        cube.SetZLength(0.05)
+
+        mapper = vtk.vtkPolyDataMapper()
+        mapper.SetInputConnection(cube.GetOutputPort())
+
+        actor = vtk.vtkActor()
+        actor.SetMapper(mapper)
+        actor.GetProperty().SetColor(0.4, 0.4, 0.4)
+        actor.SetPosition(pose[0], pose[1], pose[2])
+        actor.RotateX(orientation[0])
+        actor.RotateY(orientation[1])
+        actor.RotateZ(orientation[2])
+
+        self.ren.AddActor(actor)
+        return actor
+
 
     def add_eye_lid(self, pose, orientation):
         reader = vtk.vtkSTLReader()
@@ -135,9 +184,9 @@ class FakeMotionRendererPlugin(Plugin):
         eye_actor.SetMapper(mapper)
         eye_actor.SetTexture(texture)
         eye_actor.SetPosition(pose[0], pose[1], pose[2])
-        eye_actor.RotateX(90.0)
-        eye_actor.RotateY(0.0)
-        eye_actor.RotateZ(0.0)
+        eye_actor.RotateX(orientation[0])
+        eye_actor.RotateY(orientation[1])
+        eye_actor.RotateZ(orientation[2])
 
         self.ren.AddActor(eye_actor)
         return eye_actor
