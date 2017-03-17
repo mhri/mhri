@@ -4,6 +4,7 @@
 import json
 import rospy
 import actionlib
+import random
 
 from mhri_msgs.msg import RenderItemAction, RenderItemResult, RenderItemFeedback
 from mhri_msgs.srv import GetInstalledGestures, GetInstalledGesturesResponse
@@ -56,6 +57,14 @@ class FakeMotionRender:
         feedback = RenderItemFeedback()
 
         success = True
+        loop_count = 0
+
+        print goal
+
+        if 'fake_render_gesture' in rospy.get_name():
+            rospy.loginfo('%s rendering gesture [%s]...'%(rospy.get_name(),
+                self.motion_list['neutral'][random.randint(0, len(self.motion_list['neutral']) - 1)]))
+            loop_count = 30
 
         while True:
             if self.server.is_preempt_requested():
@@ -66,6 +75,10 @@ class FakeMotionRender:
             feedback.is_rendering = True
             self.server.publish_feedback(feedback)
             rospy.sleep(0.1)
+
+            loop_count = loop_count - 1
+            if loop_count == 0:
+                break
 
         if success:
             result.result = True

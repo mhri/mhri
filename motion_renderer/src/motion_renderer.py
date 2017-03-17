@@ -8,7 +8,7 @@ import rospy
 import actionlib
 
 from mhri_msgs.msg import RenderSceneAction, RenderSceneFeedback, RenderSceneResult
-from mhri_msgs.msg import RenderItemAction, RenderItemFeedback, RenderItemResult
+from mhri_msgs.msg import RenderItemAction, RenderItemGoal
 from mhri_msgs.srv import GetInstalledGestures
 
 
@@ -85,9 +85,11 @@ class MotionRenderer:
 
     def handle_render_sm_done(self, state, result):
         self.is_rendering['sm'] = False
+        print "SM DONE"
 
     def handle_render_sm_start(self):
         self.is_rendering['sm'] = True
+        print "SM_START"
 
 
     def handle_render_expression_done(self, state, result):
@@ -132,17 +134,27 @@ class MotionRenderer:
         first_offset_time = render_scene[scene_item_sorted_by_time[0]]['offset']
         rospy.sleep(first_offset_time)
 
-        print render_scene
-
         for i in range(0, len(scene_item_sorted_by_time) - 1):
 
             print 'send_action_goal:' + scene_item_sorted_by_time[i]
+            item_goal = RenderItemGoal()
+            item_goal.name = scene_item_sorted_by_time[i]
+            item_goal.data = render_scene[scene_item_sorted_by_time[i]]['render']
+            self.render_client[scene_item_sorted_by_time[i]].send_goal(item_goal)
+
             delta_time = render_scene[scene_item_sorted_by_time[i+1]]['offset'] - render_scene[scene_item_sorted_by_time[i]]['offset']
             print 'sleep: %f'%delta_time
             rospy.sleep(delta_time)
 
         print 'send_action_goal:' + scene_item_sorted_by_time[-1]
 
+        item_goal = RenderItemGoal()
+        item_goal.name = scene_item_sorted_by_time[-1]
+        item_goal.data = render_scene[scene_item_sorted_by_time[-1]]['render']
+        self.render_client[scene_item_sorted_by_time[-1]].send_goal(item_goal)        
+
+        for i in scene_item_sorted_by_time:
+            self.render_client[i].wait_for_result()
 
 
         '''

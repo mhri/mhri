@@ -17,7 +17,7 @@ from mhri_msgs.srv import ReadData, ReadDataRequest
 from mhri_msgs.msg import LogItem
 
 MAX_QUEUE_SIZE = 10
-TIME_FOR_CHARACTER = 0.2
+TIME_FOR_CHARACTER = 0.3
 SIZE_FOR_CHARACTER = 3
 
 
@@ -26,18 +26,14 @@ class OverridingType:
     CROSS = 1
     OVERRIDE = 2
 
-
 class SceneQueueData:
-    # Type: sm = {'tag:sm_motion', 0.0, 'happiness'}
     sm = {}
     say = {}
     gaze = {}
     pointing = {}
     sound = {}
     expression = {}
-    emotion = ''
     log = ''
-    overriding = 0
 
     def __str__(self):
         rospy.loginfo('='*10)
@@ -47,8 +43,6 @@ class SceneQueueData:
         print ' [POINTING]  : ', self.pointing
         print ' [SOUND]     : ', self.sound
         print ' [EXPRESSION]: ', self.expression
-        print ' [EMOTION]   : ', self.emotion
-        print ' [OVERRIDING]: ', self.overriding
         print ' [LOG]       : ', self.log
         rospy.loginfo('-'*10)
         return ''
@@ -105,7 +99,7 @@ class MotionArbiter:
         scene_item.sm['offset'] = 0.0
 
         scene_item.emotion = {}
-        scene_item.overriding = 0
+        overriding = 0
 
         for tag in tags:
             tag_msg = recv_msg
@@ -136,11 +130,8 @@ class MotionArbiter:
             elif tag[0].strip() == 'sound':
                 scene_item.sound['render'] = tag[1].strip()
                 scene_item.sound['offset'] = float(index / SIZE_FOR_CHARACTER * TIME_FOR_CHARACTER)
-            # elif tag[0].strip() == 'emotion':
-            #     if ':' in tag[1].strip():
-            #         scene_item.emotion[tag[1].strip().split(':')[0]] = float(tag[1].strip().split(':')[1])
             elif tag[0].strip() == 'overriding':
-                scene_item.overriding = int(tag[1].strip())
+                overriding = int(tag[1].strip())
             elif tag[0].strip() == 'log':
                 scene_item.log = tag[1].strip()
 
@@ -150,118 +141,108 @@ class MotionArbiter:
         if scene_item.pointing != {}:
             scene_item.sm = {}
 
-        # 감정은 소셜 메모리에서 읽어온다.
-        if scene_item.emotion == {}:
-            scene_item.emotion['current_emotion'] = 'netural'
-            scene_item.emotion['intensity'] = 1.0
-
-        if scene_item.overriding == OverridingType.QUEUE:
+        if overriding == OverridingType.QUEUE:
             self.scene_queue.put(scene_item)
-        elif scene_item.overriding == OverridingType.OVERRIDE:
+        elif overriding == OverridingType.OVERRIDE:
             if self.is_rendering:
                 self.renderer_client.cancel_all_goals()
                 rospy.sleep(0.1)
-                self.scene_queue.put(scene_item)
-
-        rospy.logdebug("Motion Queue Saved.")
-
+            self.scene_queue.put(scene_item)
 
     def handle_scene_queue(self):
+        rospy.wait_for_service('social_memory/read_data')
+        rd_memory = rospy.ServiceProxy('social_memory/read_data', ReadData)
+
         while not rospy.is_shutdown():
 			# Handling the scene_queue that received from domain...
             if not self.scene_queue.empty():
-                try:
-                    goal = RenderSceneGoal()
-                    scene_dict = {}
-                    scene_item = self.scene_queue.get()
+                goal = RenderSceneGoal()
+                scene_dict = {}
+                scene_item = self.scene_queue.get()
 
-                    if scene_item.pointing != {}:
-                        rospy.wait_for_service('/social_memory/read_data')
-                        try:
-                            rd_memory = rospy.ServiceProxy(
-                                'social_memory/read_data', ReadData)
-                            rd_data = ReadDataRequest()
-                            rd_data.event_name = 'person_identification'
-                            rd_data.data.append('session_face_id')
-                            rd_data.data.append('face_pos')
+                # Point and Semantic motion are exclusive relationship. If pointing exists, sm is ignored.
+                if scene_item.pointing != {}:
+                    # X, Y, Z, frame_id
+                    try:
+                        rd_data = ReadDataRequest()
+                        rd_data.event_name = 'person_identification'
+                        rd_data.data.append('session_face_id')
+                        rd_data.data.append('face_pos')
+                        resp1 = rd_memory(rd_data)
 
-                            resp1 = rd_memory(rd_data)
-
-                        except rospy.ServiceException, e:
-                            rospy.logerr("Service call failed: %s" % e)
-
-                        rospy.logdebug("Read From Social Memory")
-
+                        rospy.logdebug("Read From Social Memory: %s"%resp1)
                         recv_data = json.loads(resp1.data)
-                        try:
-                            pos = recv_data['face_pos'][
-                                recv_data['session_face_id'].index(motion.point)]
 
-                            if abs(pos[0]) < 0.15:
-                                goal.gesture = 'pm:' + 'sm_pointing/front'
-                            elif pos[0] >= 0.15 and pos[0] < 0.5:
-                                goal.gesture = 'pm:' + 'sm_pointing/right_near'
-                            elif pos[0] <= -0.15 and pos[0] > -0.5:
-                                goal.gesture = 'pm:' + 'sm_pointing/left_near'
-                            elif pos[0] >= 0.5:
-                                goal.gesture = 'pm:' + 'sm_pointing/right_far'
-                            elif pos[0] <= -0.5:
-                                goal.gesture = 'pm:' + 'sm_pointing/left_far'
+                        pos = recv_data['face_pos'][
+                            recv_data['session_face_id'].index(motion.point)]
 
-                        except ValueError:
-                            goal.gesture = 'sm:neutral'
+                        if abs(pos[0]) < 0.15:
+                            goal.gesture = 'pm:' + 'sm_pointing/front'
+                        elif pos[0] >= 0.15 and pos[0] < 0.5:
+                            goal.gesture = 'pm:' + 'sm_pointing/right_near'
+                        elif pos[0] <= -0.15 and pos[0] > -0.5:
+                            goal.gesture = 'pm:' + 'sm_pointing/left_near'
+                        elif pos[0] >= 0.5:
+                            goal.gesture = 'pm:' + 'sm_pointing/right_far'
+                        elif pos[0] <= -0.5:
+                            goal.gesture = 'pm:' + 'sm_pointing/left_far'
 
-                    else:
-                        scene_dict['sm'] = scene_item.sm
+                    except rospy.ServiceException, e:
+                        rospy.logerr("Service call failed: %s" % e)
+                    except ValueError:
+                        goal.gesture = 'sm:neutral'
+                else:
+                    scene_dict['sm'] = scene_item.sm
 
-                    '''
-                    sm = {}
-                    say = ''
-                    gaze = {}
-                    pointing = {}
-                    sound = {}
-                    expression = {}
-                    emotion = ''
-                    overriding = 0
-                    log = ''
-                    '''
+                if scene_item.gaze != {}:
+                    pass
 
-                    if scene_item.log != '':
-                        msg_log_item = LogItem()
-                        log_item = scene_item.log.split('/')
-                        for data in log_item:
-                            msg_log_item.log_items.append(data)
+                '''
+                sm = {}
+                say = ''
+                gaze = {}
+                pointing = {}
+                sound = {}
+                expression = {}
+                log = ''
+                '''
 
-                        msg_log_item.header.stamp = rospy.Time.now()
-                        self.pub_log_item.publish(msg_log_item)
+                if scene_item.log != '':
+                    msg_log_item = LogItem()
+                    log_item = scene_item.log.split('/')
+                    for data in log_item:
+                        msg_log_item.log_items.append(data)
+
+                    msg_log_item.header.stamp = rospy.Time.now()
+                    self.pub_log_item.publish(msg_log_item)
 
 
-                    scene_dict['say'] = scene_item.say
-                    scene_dict['sound'] = scene_item.sound
-                    scene_dict['expression'] = scene_item.expression
-                    scene_dict['emotion'] = scene_item.emotion
+                scene_dict['say'] = scene_item.say
+                scene_dict['sound'] = scene_item.sound
+                scene_dict['expression'] = scene_item.expression
 
-                    # if scene.gaze != {}:
-                    #     gaze_msg = GazeFocusing()
-                    #     gaze_msg.target_name = motion.gaze_target
-                    #     gaze_msg.enable = True
-                    #     self.gazefocus_pub.publish(gaze_msg)
+                # 감정은 소셜 메모리에서 읽어온다.
+                scene_dict['emotion'] = {}
+                scene_dict['emotion']['current_emotion'] = 'netural'
+                scene_dict['emotion']['intensity'] = 1.0
 
-                    self.scene_queue.task_done()
 
-                    goal.render_scene = json.dumps(scene_dict)
+                # if scene.gaze != {}:
+                #     gaze_msg = GazeFocusing()
+                #     gaze_msg.target_name = motion.gaze_target
+                #     gaze_msg.enable = True
+                #     self.gazefocus_pub.publish(gaze_msg)
 
-                    self.renderer_client.send_goal(goal, done_cb=self.render_done, feedback_cb=self.render_feedback, active_cb=self.render_active)
-                    while self.renderer_client.get_state() == actionlib.GoalStatus.ACTIVE:
-                        pass
-                    while self.is_rendering:
-                        # rospy.loginfo('Scene rendering...')
-                        rospy.sleep(0.1)
+                self.scene_queue.task_done()
 
-                except Queue.Empty:
-                    continue
+                goal.render_scene = json.dumps(scene_dict)
+
+                self.renderer_client.send_goal(goal, done_cb=self.render_done, feedback_cb=self.render_feedback, active_cb=self.render_active)
+                while self.renderer_client.get_state() == actionlib.GoalStatus.ACTIVE:
+                    pass
+                while self.is_rendering:
+                    rospy.sleep(0.1)
             else:
-                # rospy.loginfo("Scene queue empty...")
                 rospy.sleep(0.1)
 
     def render_active(self):
