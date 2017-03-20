@@ -1,0 +1,3 @@
+- git: {local-name: mhri, uri: "https://github.com/mhri/mhri.git"}
+- git: {local-name: mhri_msgs, uri: "https://github.com/mhri/mhri_msgs.git"}
+- git: {local-name: mhri_dialog, uri: "https://github.com/mhri/mhri_dialog.git"}
