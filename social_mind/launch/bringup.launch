@@ -1,0 +1,28 @@
+<launch>
+    <arg name="mind_path" />
+    <arg name="overwrite" default="false" />
+
+    <!-- Run the Social Warehouse -->
+    <node name="social_mind" type="mongo_wrapper_ros.py" pkg="social_mind" output="screen">
+        <param name="host" value="localhost" />
+        <param name="port" value="33402" />
+        <param name="overwrite" value="$(arg overwrite)" />
+        <param name="mind_path" value="$(arg mind_path)" />
+    </node>
+
+    <!-- Run the Social Memory -->
+    <node name="social_events_memory" type="memory_node.py" pkg="social_mind" output="screen">
+        <param name="name_events_group" value="social_events" />
+        <param name="events" value="$(find social_mind)/config/social_events.yaml" />
+    </node>
+
+    <node name="environmental_memory" type="memory_node.py" pkg="social_mind" output="screen">
+        <param name="name_events_group" value="environment_info" />
+        <param name="events" value="$(find social_mind)/config/social_events.yaml" />
+    </node>
+
+    <node name="system_events_memory" type="memory_node.py" pkg="social_mind" output="screen">
+        <param name="name_events_group" value="system_events" />
+        <param name="events" value="$(find social_mind)/config/social_events.yaml" />
+    </node>
+</launch>

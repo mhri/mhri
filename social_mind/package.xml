@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <package>
-    <name>social_memory</name>
+    <name>social_mind</name>
     <version>0.0.0</version>
     <description>
-        Persistent storage of Social HRI events
+        Persistent storage of Social Mind
     </description>
 
     <author email="byeongkyu@gmail.com">Byeong-Kyu Ahn</author>
@@ -23,9 +23,7 @@
     <run_depend>warehouse_ros</run_depend>
     <run_depend>python-pymongo</run_depend>
     <run_depend>mhri_msgs</run_depend>
-    <run_depend>message_runtime</run_depend>
-
-    <!-- <test_depend>gtest</test_depend> -->
+    <run_depend>message_runtime</run_depend>    
 
     <export></export>
 </package>

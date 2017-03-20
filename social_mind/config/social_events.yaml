@@ -1,4 +1,4 @@
-social_events:
+memory_templates:
   # Touch Activity
   touch_activity:
     head_touched: false
@@ -15,7 +15,7 @@ social_events:
 
   # 음성 인식
   speech_recognition:
-    speed_recognized: false
+    speech_recognized: false
     recognized_word: ''
     confidence: 0
 
@@ -134,7 +134,7 @@ social_events:
     environment_detection: false
     ambient_temperature: 0
     relative_humidity: 0
-    
+
 
 data_type:
   # 위치 (기본데이터)
