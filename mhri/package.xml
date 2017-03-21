@@ -11,11 +11,12 @@
   <url type="website">https://github.com/mhri/mhri/wiki</url>
 
   <buildtool_depend>catkin</buildtool_depend>
-  <run_depend>mhri_msgs</run_depend>
-  <run_depend>social_memory</run_depend>
-  <run_depend>mhri_dialog</run_depend>
-  <run_depend>motion_arbiter</run_depend>
-  <run_depend>motion_renderer</run_depend>
+  <build_depend>mhri_msgs</build_depend>
+  <build_depend>social_mind</build_depend>
+  <build_depend>mhri_dialog</build_depend>
+  <build_depend>motion_arbiter</build_depend>
+  <build_depend>motion_renderer</build_depend>
+  <build_depend>motion_tools</build_depend>
 
   <export>
   </export>
