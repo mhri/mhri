@@ -59,7 +59,7 @@ if __name__ == '__main__':
         sys.exit()
 
     rospy.init_node('social_warehouse')
-    path_param = rospy.get_param('~db_path' , '/tmp/db')
+    path_param = rospy.get_param('~mind_path' , '/tmp/db')
     dbpath = path.expanduser(path_param)
     overwrite = rospy.get_param('~overwrite', False)
 
@@ -92,7 +92,7 @@ if __name__ == '__main__':
     # OK, now actually run mongod
     try:
         cmd = "mongod"
-        sp.check_call("{2} --syslog --dbpath {0} --port {1}".format(dbpath, port, cmd).split())
+        sp.check_call("{2}  --dbpath {0} --port {1}".format(dbpath, port, cmd).split())
     except sp.CalledProcessError as e:
         if e.returncode == 12:
             rospy.loginfo("Ignoring mongod's nonstandard return code of 12")

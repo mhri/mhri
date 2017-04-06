@@ -12,7 +12,7 @@ from Queue import Queue
 import pymongo
 from mhri_msgs.msg import WaitEventAction, WaitEventFeedback, WaitEventResult
 from mhri_msgs.msg import RaiseEvents
-from mhri_msgs.srv import ReadData, ReadDataResponse, WriteData, WriteDataResponse
+from mhri_msgs.srv import ReadData, ReadDataResponse, WriteData, WriteDataResponse, RegisterData, RegisterDataResponse, GetDataList, GetDataListResponse
 
 
 class SetQueue(Queue):
@@ -34,7 +34,6 @@ class SetQueue(Queue):
 class MemoryNode:
     def __init__(self):
         rospy.init_node('memory_node', anonymous=False)
-
         while not rospy.is_shutdown():
             try:
                 port = rospy.get_param('/social_mind/port')
@@ -45,51 +44,29 @@ class MemoryNode:
                 rospy.sleep(1.0)
                 continue
 
-        # Connect to MongoDB & select event_memory
         try:
             self.client = pymongo.MongoClient(host, port, serverSelectionTimeoutMS=2000)
-            self.client.is_mongos
+            self.client.is_mongos   # Wait for connection
+            self.db = self.client[rospy.get_param('~name_data_group')]
+            # self.db.set_profiling_level(0, 400) # Performance Setting: Set the database’s profiling level to 0, and slow_ms is 400ms.
+            self.collections = {}
+            self.data_template = {}
         except pymongo.errors.ServerSelectionTimeoutError, e:
             rospy.logerr('Error: %s'%e.message)
             quit()
+        except KeyError, e:
+            quit()
 
-        # Loading events_template
-        name_of_events_group = rospy.get_param('~name_events_group')
-        events_file = rospy.get_param('~events')
-        with open(events_file) as f:
-            events_template = yaml.load(f)
+        self.srv_read_data = rospy.Service('%s/read_data'%rospy.get_name(), ReadData, self.handle_read_data)
+        self.srv_write_data = rospy.Service('%s/write_data'%rospy.get_name(), WriteData, self.handle_write_data)
+        self.srv_register_data = rospy.Service('%s/register_data'%rospy.get_name(), RegisterData, self.handle_register_data)
+        self.srv_get_data_list = rospy.Service('%s/get_data_list'%rospy.get_name(), GetDataList, self.handle_get_data_list)
 
-        self.db = self.client[name_of_events_group]
-        # Performance Setting: Set the database’s profiling level to 0, and slow_ms is 400ms.
-        self.db.set_profiling_level(0, 400)
-
-        # Initialize Events Memory
-        self.list_events = events_template['memory_templates']
-        self.collector = {}
-        for i in self.list_events.keys():
-            self.collector[i] = self.db[i]
-
-        # Topics & Services & ActionServer
-        self.srv_read_data = rospy.Service(
-                    '%s/read_data'%rospy.get_name(),
-                    ReadData,
-                    self.handle_read_data)
-        self.srv_write_data = rospy.Service(
-                    '%s/write_data'%rospy.get_name(),
-                    WriteData,
-                    self.handle_write_data)
-        self.wait_event_server = actionlib.SimpleActionServer(
-                    '%s/wait_event'%rospy.get_name(),
-                    WaitEventAction,
-                    self.handle_wait_event,
-                    auto_start=False)
+        self.wait_event_server = actionlib.SimpleActionServer('%s/wait_event'%rospy.get_name(), WaitEventAction, self.handle_wait_event, auto_start=False)
         self.wait_event_server.start()
         rospy.loginfo('[%s] Initialzed and ready to use...'%rospy.get_name())
 
-
     def handle_wait_event(self, goal):
-        """ Handle function for wait_event calling by dialog
-        """
         d = datetime.datetime.fromtimestamp(rospy.get_time())
 
         query_result_count = 0;
@@ -115,17 +92,9 @@ class MemoryNode:
         result.result = True
         self.wait_for_event_server.set_succeeded(result)
 
-
     def handle_read_data(self, req):
-        """ Handle function for reading some data from memory_node
-        Args:
-            event_name, data
-        Returns:
-            True or False
-            Requested data.
-        """
         query_result = {}
-        for data in self.collector[str(req.event_name)].find().sort('_id', pymongo.DESCENDING).limit(1):
+        for data in self.collections[str(req.perception_name)].find().sort('_id', pymongo.DESCENDING).limit(1):
             query_result = data
 
         res = ReadDataResponse()
@@ -135,8 +104,7 @@ class MemoryNode:
             return res
 
         del query_result['_id']
-        # Convert datetime to timestamp
-        query_result['time'] = float(query_result['time'].strftime('%s.%f'))
+        query_result['time'] = float(query_result['time'].strftime('%s.%f')) # Convert datetime to timestamp
 
         res.result = True
         if len(req.data) == 0:
@@ -148,42 +116,27 @@ class MemoryNode:
             for item in req.data:
                 ret_data[item] = query_result[item]
             res.data = json.dumps(ret_data)
-
         return res
 
-
     def handle_write_data(self, req):
-        """ Handle function for writing some data to memory_node
-        Args:
-            event, data, by
-        Returns:
-            True or False
-        """
-        req.event = req.event.replace("'", '"')
-        req.data = req.data.replace("'", '"')
-
-        recv_event = json.loads(req.event)
         recv_data = json.loads(req.data)
-
-        write_data = {}
-        if self.list_events.has_key(req.event_name):
-            write_data = self.list_events[req.event_name].copy()
-        else:
-            rospy.logerr('Event [%s] is not exists on this Events.'%req.event_name)
-            return WriteDataResponse(False)
-
+        write_data = recv_data.copy()
         write_data['time'] = datetime.datetime.fromtimestamp(rospy.get_time())
         write_data['by'] = req.by
 
-        for key in recv_event:
-            if write_data.has_key(key):
-                write_data[key] = recv_event[key]
-        for key in recv_data:
-            if write_data.has_key(key):
-                write_data[key] = recv_data[key]
-
-        self.collector[req.event_name].insert_one(write_data)
+        self.collections[req.perception_name].insert_one(write_data)
         return WriteDataResponse(True)
+
+    def handle_register_data(self, req):
+        self.data_template[req.perception_name] = json.loads(req.data)
+        self.collections[req.perception_name] = self.db[req.perception_name]
+        return RegisterDataResponse(True)
+
+    def handle_get_data_list(self, req):
+        resp = GetDataListResponse()
+        resp.result = True
+        resp.data_list = json.dumps(self.data_template)
+        return resp
 
 
 if __name__ == '__main__':

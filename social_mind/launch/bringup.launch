@@ -12,17 +12,17 @@
 
     <!-- Run the Social Memory -->
     <node name="social_events_memory" type="memory_node.py" pkg="social_mind" output="screen">
-        <param name="name_events_group" value="social_events" />
-        <param name="events" value="$(find social_mind)/config/social_events.yaml" />
+        <param name="name_data_group" value="social_event_data" />
+        <!-- <param name="events" value="$(find social_mind)/config/social_events.yaml" /> -->
     </node>
 
     <node name="environmental_memory" type="memory_node.py" pkg="social_mind" output="screen">
-        <param name="name_events_group" value="environment_info" />
-        <param name="events" value="$(find social_mind)/config/social_events.yaml" />
+        <param name="name_data_group" value="environment_info_data" />
+        <!-- <param name="events" value="$(find social_mind)/config/environment_info.yaml" /> -->
     </node>
 
     <node name="system_events_memory" type="memory_node.py" pkg="social_mind" output="screen">
-        <param name="name_events_group" value="system_events" />
-        <param name="events" value="$(find social_mind)/config/social_events.yaml" />
+        <param name="name_data_group" value="system_event_data" />
+        <!-- <param name="events" value="$(find social_mind)/config/system_events.yaml" /> -->
     </node>
 </launch>
