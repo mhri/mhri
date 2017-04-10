@@ -107,13 +107,13 @@ class MemoryNode:
         query_result['time'] = float(query_result['time'].strftime('%s.%f')) # Convert datetime to timestamp
 
         res.result = True
-        if len(req.data) == 0:
+        if len(req.query) == 0:
             res.data = json.dumps(query_result)
-        elif len(req.data) == 1 and req.data[0] == '':
+        elif len(req.query) == 1 and req.query[0] == '':
             res.data = json.dumps(query_result)
         else:
             ret_data = {}
-            for item in req.data:
+            for item in req.query:
                 ret_data[item] = query_result[item]
             res.data = json.dumps(ret_data)
         return res

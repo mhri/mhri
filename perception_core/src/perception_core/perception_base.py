@@ -5,7 +5,7 @@ import os
 import yaml
 import json
 import rospy
-from mhri_msgs.msg import RaiseEvent
+from mhri_msgs.msg import ForwardingEvent
 from mhri_msgs.srv import WriteData, WriteDataRequest, ReadData, RegisterData, RegisterDataRequest
 
 
@@ -39,7 +39,7 @@ class PerceptionBase(object):
 
                 self.register_data_to_memory(memory_name, item, self.conf_data[item]['data'])
 
-        self.pub_event = rospy.Publisher('raise_event', RaiseEvent, queue_size=10)
+        self.pub_event = rospy.Publisher('forwarding_event', ForwardingEvent, queue_size=10)
         rospy.loginfo('\033[94m[%s]\033[0m Initialize PerceptionBase done...'%rospy.get_name())
 
 
@@ -51,7 +51,7 @@ class PerceptionBase(object):
             rospy.logwarn('<%s> event is not member of event list of perception configuration...'%event)
             return
 
-        msg = RaiseEvent()
+        msg = ForwardingEvent()
         msg.header.stamp = rospy.Time.now()
         msg.event = event
         msg.by = perception_item
@@ -86,5 +86,5 @@ class PerceptionBase(object):
         target_memory = self.conf_data[perception_name]['target_memory']
         self.dict_srv_wr[target_memory](srv_req)
 
-    def read_from_memory(self, target_memory, data):        
+    def read_from_memory(self, target_memory, data):
         pass
