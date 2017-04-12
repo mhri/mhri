@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package>
+  <name>mhri_msgs</name>
+  <version>0.0.0</version>
+  <description>The package includes ROS message/service/action for Social HRI Framework</description>
+
+  <maintainer email="byeongkyu@gmail.com">Byeong-Kyu Ahn</maintainer>
+  <author email="byeongkyu@gmail.com">Byeong-Kyu Ahn</author>
+
+  <license>BSD</license>
+  <url type="website">https://github.com/mhri/mhri/wiki</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>std_msgs</build_depend>
+  <run_depend>std_msgs</run_depend>
+
+
+  <export>
+  </export>
+</package>
