@@ -15,12 +15,12 @@ class FakeMotionRender:
         rospy.init_node('fake_renderer', anonymous=True)
 
         try:
-            topic_name = rospy.get_param('~topic_name')
+            topic_name = rospy.get_param('~action_name')
         except KeyError as e:
             print('[ERROR] Needed parameter for (topic_name)...')
             quit()
 
-        if 'fake_render_gesture' in rospy.get_name():
+        if 'render_gesture' in rospy.get_name():
             self.GetInstalledGesturesService = rospy.Service(
                 "get_installed_gestures",
                 GetInstalledGestures,
@@ -52,21 +52,22 @@ class FakeMotionRender:
 
 
     def execute_callback(self, goal):
-        rospy.loginfo('%s rendering requested...' % rospy.get_name())
+        rospy.loginfo('\033[95m%s\033[0m rendering requested...' % rospy.get_name())
         result = RenderItemResult()
         feedback = RenderItemFeedback()
 
         success = True
         loop_count = 0
 
-        print goal
-
-        if 'fake_render_gesture' in rospy.get_name():
-            rospy.loginfo('%s rendering gesture [%s]...'%(rospy.get_name(),
+        if 'render_gesture' in rospy.get_name():
+            rospy.loginfo('\033[94m[%s]\033[0m rendering gesture [%s]...'%(rospy.get_name(),
                 self.motion_list['neutral'][random.randint(0, len(self.motion_list['neutral']) - 1)]))
-            loop_count = 30
+            loop_count = 20
+        if 'render_speech' in rospy.get_name():
+            rospy.loginfo('\033[94m[%s]\033[0m rendering speech [%s]...'%(rospy.get_name(), goal.data))
+            loop_count = 10
 
-        while True:
+        while not rospy.is_shutdown():
             if self.server.is_preempt_requested():
                 self.server.set_preempted()
                 success = False
@@ -83,9 +84,9 @@ class FakeMotionRender:
         if success:
             result.result = True
             self.server.set_succeeded(result)
-            rospy.loginfo('%s rendering completed...' % rospy.get_name())
+            rospy.loginfo('\033[95m%s\033[0m rendering completed...' % rospy.get_name())
         else:
-            rospy.loginfo('%s rendering canceled...' % rospy.get_name())
+            rospy.loginfo('\033[95m%s\033[0m rendering canceled...' % rospy.get_name())
 
 
 if __name__ == '__main__':

@@ -11,7 +11,7 @@ from Queue import Queue
 
 import pymongo
 from mhri_msgs.msg import WaitEventAction, WaitEventFeedback, WaitEventResult
-from mhri_msgs.msg import RaiseEvents
+from mhri_msgs.msg import RaisingEvents
 from mhri_msgs.srv import ReadData, ReadDataResponse, WriteData, WriteDataResponse, RegisterData, RegisterDataResponse, GetDataList, GetDataListResponse
 
 

@@ -1,0 +1,14 @@
+<launch>
+    <arg name="project_path"/>
+    <arg name="overwrite" default="false"/>
+
+    <include file="$(find social_mind)/launch/bringup_mind.launch">
+        <arg name="mind_path" value="$(arg project_path)/mind" />
+        <arg name="overwrite" value="$(arg overwrite)" />
+    </include>
+
+    <node name="events_multiplexer" type="multiplexer_node.py" pkg="events_multiplexer" output="screen"/>
+
+    <node name="motion_arbiter" type="motion_arbiter.py" pkg="motion_arbiter" output="screen" />
+    <node name="motion_renderer" type="motion_renderer.py" pkg="motion_renderer" output="screen" />
+</launch>

@@ -53,15 +53,15 @@ class MotionArbiter:
     def __init__(self):
         self.is_rendering = False
 
-        rospy.loginfo('Waiting for bringup social_memory...')
+        rospy.loginfo('Waiting for bringup social_mind...')
         try:
-            rospy.wait_for_service('/social_memory/write_data')
+            rospy.wait_for_service('social_events_memory/read_data')
         except rospy.exceptions.ROSInterruptException as e:
             rospy.logerr(e)
             quit()
 
         self.renderer_client = actionlib.SimpleActionClient('render_scene', RenderSceneAction)
-        rospy.loginfo('Waiting for action server to start...')
+        rospy.loginfo('Waiting for motion_renderer to start...')
 
         try:
             self.renderer_client.wait_for_server()
@@ -150,8 +150,8 @@ class MotionArbiter:
             self.scene_queue.put(scene_item)
 
     def handle_scene_queue(self):
-        rospy.wait_for_service('social_memory/read_data')
-        rd_memory = rospy.ServiceProxy('social_memory/read_data', ReadData)
+        rospy.wait_for_service('social_events_memory/read_data')
+        rd_memory = rospy.ServiceProxy('social_events_memory/read_data', ReadData)
 
         while not rospy.is_shutdown():
 			# Handling the scene_queue that received from domain...

@@ -6,19 +6,16 @@
     <arg name="fake_render_sound" default="true" />
 
     <!-- Start the fake motion_renderer if user not ready for actual motion_renderer -->
-    <node name="fake_render_speech" type="fake_renderer.py" pkg="motion_renderer" output="screen" if="$(arg fake_render_speech)">
-        <param name="topic_name" value="render_speech" />
+    <node name="render_speech" type="fake_renderer.py" pkg="motion_renderer" output="screen" if="$(arg fake_render_speech)">
+        <param name="action_name" value="render_speech" />
     </node>
-    <node name="fake_render_gesture" type="fake_renderer.py" pkg="motion_renderer" output="screen" if="$(arg fake_render_gesture)">
-        <param name="topic_name" value="render_gesture" />
+    <node name="render_gesture" type="fake_renderer.py" pkg="motion_renderer" output="screen" if="$(arg fake_render_gesture)">
+        <param name="action_name" value="render_gesture" />
     </node>
-    <node name="fake_render_facial_expression" type="fake_renderer.py" pkg="motion_renderer" output="screen" if="$(arg fake_render_facial_expression)">
-        <param name="topic_name" value="render_facial_expression" />
+    <node name="render_facial_expression" type="fake_renderer.py" pkg="motion_renderer" output="screen" if="$(arg fake_render_facial_expression)">
+        <param name="action_name" value="render_facial_expression" />
     </node>
-    <node name="fake_render_sound" type="fake_renderer.py" pkg="motion_renderer" output="screen" if="$(arg fake_render_sound)">
-        <param name="topic_name" value="render_sound" />
-    </node>
-
-    <node name="motion_renderer" type="motion_renderer.py" pkg="motion_renderer" output="screen">
+    <node name="render_sound" type="fake_renderer.py" pkg="motion_renderer" output="screen" if="$(arg fake_render_sound)">
+        <param name="action_name" value="render_sound" />
     </node>
 </launch>

@@ -16,28 +16,32 @@ class MotionRenderer:
     is_rendering = {}
     render_client = {}
     cb_start = {}
-    #cb_rendering = {}
     cb_done = {}
 
     def __init__(self):
-        self.render_client['say'] = actionlib.SimpleActionClient('render_speech', RenderItemAction)
-        self.render_client['say'].wait_for_server()
-        #
-        self.render_client['sm'] = actionlib.SimpleActionClient('render_gesture', RenderItemAction)
-        self.render_client['sm'].wait_for_server()
+        rospy.init_node('motion_renderer', anonymous=False)
 
+        self.server = actionlib.SimpleActionServer('render_scene', RenderSceneAction, self.execute_callback, False)
+        self.server.register_preempt_callback(self.preempt_callback)
+        self.server.start()
+
+        rospy.loginfo('\033[94m[%s]\033[0m Wait for render item...'%rospy.get_name())
         try:
-            rospy.wait_for_service('get_installed_gestures', timeout=1)
+            rospy.wait_for_service('get_installed_gestures')
         except rospy.exceptions.ROSException as e:
             rospy.logerr(e)
             quit()
 
+        self.render_client['say'] = actionlib.SimpleActionClient('render_speech', RenderItemAction)
+        self.render_client['say'].wait_for_server()
+
+        self.render_client['sm'] = actionlib.SimpleActionClient('render_gesture', RenderItemAction)
+        self.render_client['sm'].wait_for_server()
+
         self.get_motion = rospy.ServiceProxy('get_installed_gestures', GetInstalledGestures)
         json_data = self.get_motion()
         self.motion_tag = json.loads(json_data.gestures)
-
         rospy.loginfo('[%s] Success to get motion_tag from gesture server' % rospy.get_name())
-
 
         self.render_client['expression'] = actionlib.SimpleActionClient('render_facial_expression', RenderItemAction)
         self.render_client['expression'].wait_for_server()
@@ -45,9 +49,6 @@ class MotionRenderer:
         self.render_client['sound'] = actionlib.SimpleActionClient('render_sound', RenderItemAction)
         self.render_client['sound'].wait_for_server()
 
-        self.server = actionlib.SimpleActionServer('render_scene', RenderSceneAction, self.execute_callback, False)
-        self.server.register_preempt_callback(self.preempt_callback)
-        self.server.start()
 
         # Status flags
         self.is_rendering['say'] = False
@@ -57,70 +58,47 @@ class MotionRenderer:
 
         # Register callback functions.
         self.cb_start['say'] = self.handle_render_say_start
-        #self.cb_rendering['say'] = self.handle_render_say_rendering
         self.cb_done['say'] = self.handle_render_say_done
 
         self.cb_start['sm'] = self.handle_render_sm_start
-        #self.cb_rendering['sm'] = self.handle_render_sm_rendering
         self.cb_done['sm'] = self.handle_render_sm_done
 
         self.cb_start['expression'] = self.handle_render_expression_start
-        #self.cb_rendering['expression'] = self.handle_render_expression_rendering
         self.cb_done['expression'] = self.handle_render_expression_done
 
         self.cb_start['sound'] = self.handle_render_sound_start
-        #self.cb_rendering['sound'] = self.handle_render_sound_rendering
         self.cb_done['sound'] = self.handle_render_sound_done
 
-        rospy.loginfo("[%s] Initialized." % rospy.get_name())
+        rospy.loginfo("\033[94m[%s]\033[0m Initialized."%rospy.get_name())
+        rospy.spin()
 
 
     def handle_render_say_done(self, state, result):
         self.is_rendering['say'] = False
-
     def handle_render_say_start(self):
-        self.is_rendering['say'] = True
-        pass
-
-
+        self.is_rendering['say'] = True        
     def handle_render_sm_done(self, state, result):
         self.is_rendering['sm'] = False
-        print "SM DONE"
-
     def handle_render_sm_start(self):
         self.is_rendering['sm'] = True
-        print "SM_START"
-
-
     def handle_render_expression_done(self, state, result):
         self.is_rendering['expression'] = False
-
     def handle_render_expression_start(self):
         self.is_rendering['expression'] = True
-
-
     def handle_render_sound_done(self, state, result):
         self.is_rendering['sound'] = False
-
     def handle_render_sound_start(self):
         self.is_rendering['sound'] = True
 
 
-
-    '''
-	Server
-	'''
-
     def preempt_callback(self):
-        rospy.logwarn('Motion Rendering Preempted.')
-        if self.is_speaking_now:
-            self.speech_client.cancel_all_goals()
-        if self.is_playing_now:
-            self.gesture_client.cancel_all_goals()
+        rospy.logwarn('\033[94m[%s]\033[0m rendering preempted.'%rospy.get_name())
+        for k in self.is_rendering.keys():
+            if self.is_rendering[k]:
+                self.render_client[k].cancel_all_goals()
 
     def execute_callback(self, goal):
-        # Do lots of awesome groundbreaking robot stuff here
-        rospy.logwarn('Motion Rendering Started.')
+        rospy.loginfo('\033[94m[%s]\033[0m rendering started.'%rospy.get_name())
         result = RenderSceneResult()
 
         render_scene = json.loads(goal.render_scene)
@@ -135,27 +113,39 @@ class MotionRenderer:
         rospy.sleep(first_offset_time)
 
         for i in range(0, len(scene_item_sorted_by_time) - 1):
-
-            print 'send_action_goal:' + scene_item_sorted_by_time[i]
             item_goal = RenderItemGoal()
             item_goal.name = scene_item_sorted_by_time[i]
             item_goal.data = render_scene[scene_item_sorted_by_time[i]]['render']
-            self.render_client[scene_item_sorted_by_time[i]].send_goal(item_goal)
+
+            self.render_client[scene_item_sorted_by_time[i]].send_goal(
+                goal=item_goal,
+                done_cb=self.cb_done[scene_item_sorted_by_time[i]],
+                active_cb=self.cb_start[scene_item_sorted_by_time[i]])
+
+            while not rospy.is_shutdown() and not self.is_rendering[scene_item_sorted_by_time[i]]:
+                pass
 
             delta_time = render_scene[scene_item_sorted_by_time[i+1]]['offset'] - render_scene[scene_item_sorted_by_time[i]]['offset']
-            print 'sleep: %f'%delta_time
             rospy.sleep(delta_time)
-
-        print 'send_action_goal:' + scene_item_sorted_by_time[-1]
 
         item_goal = RenderItemGoal()
         item_goal.name = scene_item_sorted_by_time[-1]
         item_goal.data = render_scene[scene_item_sorted_by_time[-1]]['render']
-        self.render_client[scene_item_sorted_by_time[-1]].send_goal(item_goal)        
 
-        for i in scene_item_sorted_by_time:
-            self.render_client[i].wait_for_result()
+        self.render_client[scene_item_sorted_by_time[-1]].send_goal(
+            goal=item_goal,
+            done_cb=self.cb_done[scene_item_sorted_by_time[-1]],
+            active_cb=self.cb_start[scene_item_sorted_by_time[-1]])
 
+        while not rospy.is_shutdown() and not self.is_rendering[scene_item_sorted_by_time[-1]]:
+            pass
+
+        while not rospy.is_shutdown():
+            rendering = False
+            for i in scene_item_sorted_by_time:
+                rendering = rendering or self.is_rendering[i]
+            if not rendering:
+                break
 
         '''
 		if goal.emotion == 'neutral':
@@ -230,13 +220,11 @@ class MotionRenderer:
 
 		self.pub_face_emotion.publish(SetFacialExpression.PREVIOUS_FACE, 1.0)
         '''
-        rospy.logwarn('Motion Rendering Completed.')
+        rospy.loginfo('\033[94m[%s]\033[0m rendering completed.'%rospy.get_name())
 
         result.result = True
         self.server.set_succeeded(result)
 
 
 if __name__ == '__main__':
-    rospy.init_node('motion_renderer', anonymous=False)
     m = MotionRenderer()
-    rospy.spin()
