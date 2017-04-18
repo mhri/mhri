@@ -93,22 +93,26 @@ class MemoryNode:
         self.wait_for_event_server.set_succeeded(result)
 
     def handle_read_data(self, req):
-        query_result = {}
-        for data in self.collections[str(req.perception_name)].find().sort('_id', pymongo.DESCENDING).limit(1):
-            query_result = data
+        query_result = []
+        #for data in self.collections[str(req.perception_name)].find().sort('_id', pymongo.DESCENDING).limit(1):
+        #    query_result = data
+        for data in self.collections[str(req.perception_name)].find().sort('time', pymongo.DESCENDING):
+            query_result.append(data)
 
         res = ReadDataResponse()
-        if query_result == {}:
+        if len(query_result) == 0:
             res.result = False
-            res.data = '{}'
+            res.data = []
             return res
 
-        del query_result['_id']
-        query_result['time'] = float(query_result['time'].strftime('%s.%f')) # Convert datetime to timestamp
+        for data in query_result:
+            del data['_id']
+            data['time'] = float(data['time'].strftime('%s.%f')) # Convert datetime to timestamp
 
         res.result = True
         if len(req.query) == 0:
-            res.data = json.dumps(query_result)
+            for i in query_result:
+                res.data.append(json.dumps(i))
         elif len(req.query) == 1 and req.query[0] == '':
             res.data = json.dumps(query_result)
         else:
@@ -124,7 +128,11 @@ class MemoryNode:
         write_data['time'] = datetime.datetime.fromtimestamp(rospy.get_time())
         write_data['by'] = req.by
 
-        self.collections[req.perception_name].insert_one(write_data)
+        if rospy.get_name() == '/environmental_memory':
+            self.collections[req.perception_name].update_one(
+                {'object_name':write_data['object_name']}, {'$set': write_data}, upsert=True)
+        else:
+            self.collections[req.perception_name].insert_one(write_data)
         return WriteDataResponse(True)
 
     def handle_register_data(self, req):
