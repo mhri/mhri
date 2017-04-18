@@ -40,7 +40,7 @@ class MemoryNode:
                 host = rospy.get_param('/social_mind/host')
                 break
             except KeyError as e:
-                rospy.loginfo('Wait for bringup social_mind node...')
+                rospy.loginfo('[%s] wait for bringup social_mind node...'%rospy.get_name())
                 rospy.sleep(1.0)
                 continue
 
@@ -64,7 +64,7 @@ class MemoryNode:
 
         self.wait_event_server = actionlib.SimpleActionServer('%s/wait_event'%rospy.get_name(), WaitEventAction, self.handle_wait_event, auto_start=False)
         self.wait_event_server.start()
-        rospy.loginfo('[%s] Initialzed and ready to use...'%rospy.get_name())
+        rospy.loginfo('[%s] initialzed and ready to use...'%rospy.get_name())
 
     def handle_wait_event(self, goal):
         d = datetime.datetime.fromtimestamp(rospy.get_time())

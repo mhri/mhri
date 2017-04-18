@@ -25,7 +25,7 @@ class MotionRenderer:
         self.server.register_preempt_callback(self.preempt_callback)
         self.server.start()
 
-        rospy.loginfo('\033[94m[%s]\033[0m Wait for render item...'%rospy.get_name())
+        rospy.loginfo('\033[94m[%s]\033[0m wait for render item...'%rospy.get_name())
         try:
             rospy.wait_for_service('get_installed_gestures')
         except rospy.exceptions.ROSException as e:
@@ -41,7 +41,7 @@ class MotionRenderer:
         self.get_motion = rospy.ServiceProxy('get_installed_gestures', GetInstalledGestures)
         json_data = self.get_motion()
         self.motion_tag = json.loads(json_data.gestures)
-        rospy.loginfo('[%s] Success to get motion_tag from gesture server' % rospy.get_name())
+        rospy.loginfo('\033[94m[%s]\033[0m success to get motion_tag from gesture server' % rospy.get_name())
 
         self.render_client['expression'] = actionlib.SimpleActionClient('render_facial_expression', RenderItemAction)
         self.render_client['expression'].wait_for_server()
@@ -69,14 +69,14 @@ class MotionRenderer:
         self.cb_start['sound'] = self.handle_render_sound_start
         self.cb_done['sound'] = self.handle_render_sound_done
 
-        rospy.loginfo("\033[94m[%s]\033[0m Initialized."%rospy.get_name())
+        rospy.loginfo("\033[94m[%s]\033[0m initialized."%rospy.get_name())
         rospy.spin()
 
 
     def handle_render_say_done(self, state, result):
         self.is_rendering['say'] = False
     def handle_render_say_start(self):
-        self.is_rendering['say'] = True        
+        self.is_rendering['say'] = True
     def handle_render_sm_done(self, state, result):
         self.is_rendering['sm'] = False
     def handle_render_sm_start(self):

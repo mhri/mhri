@@ -12,7 +12,7 @@ class MultiplexerNode:
     def __init__(self):
         rospy.init_node('multiplexer_node', anonymous=False)
 
-        rospy.loginfo('Wait for bringup social_events_memory...')
+        rospy.loginfo('\033[93m[%s]\033[0m wait for bringup social_events_memory...'%rospy.get_name())
         rospy.wait_for_service('social_events_memory/read_data')
         self.rd_event_mem = rospy.ServiceProxy('social_events_memory/read_data', ReadData)
         rospy.Subscriber('forwarding_event', ForwardingEvent, self.handle_social_events)
@@ -24,7 +24,7 @@ class MultiplexerNode:
         event_period = rospy.get_param('~event_period', 0.5)
         rospy.Timer(rospy.Duration(event_period), self.handle_trigger_events)
 
-        rospy.loginfo('%s initialized...'%rospy.get_name())
+        rospy.loginfo('\033[93m[%s]\033[0m initialized...'%rospy.get_name())
         rospy.spin()
 
 

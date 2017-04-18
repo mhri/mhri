@@ -31,7 +31,7 @@ class PerceptionBase(object):
         for item in self.conf_data.keys():
             if self.conf_data[item].has_key('target_memory'):
                 memory_name = self.conf_data[item]['target_memory']
-                rospy.loginfo('\033[94m[%s]\033[0m Wait for bringup %s...'%(rospy.get_name(), memory_name))
+                rospy.loginfo('\033[94m[%s]\033[0m wait for bringup %s...'%(rospy.get_name(), memory_name))
 
                 rospy.wait_for_service('/%s/write_data'%memory_name)
                 self.dict_srv_wr[memory_name] = rospy.ServiceProxy('/%s/write_data'%memory_name, WriteData)
@@ -40,7 +40,7 @@ class PerceptionBase(object):
                 self.register_data_to_memory(memory_name, item, self.conf_data[item]['data'])
 
         self.pub_event = rospy.Publisher('forwarding_event', ForwardingEvent, queue_size=10)
-        rospy.loginfo('\033[94m[%s]\033[0m Initialize PerceptionBase done...'%rospy.get_name())
+        rospy.loginfo('\033[94m[%s]\033[0m initialize perception_base done...'%rospy.get_name())
 
 
     def raise_event(self, perception_item, event):

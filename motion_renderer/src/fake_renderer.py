@@ -60,12 +60,29 @@ class FakeMotionRender:
         loop_count = 0
 
         if 'render_gesture' in rospy.get_name():
-            rospy.loginfo('\033[94m[%s]\033[0m rendering gesture [%s]...'%(rospy.get_name(),
-                self.motion_list['neutral'][random.randint(0, len(self.motion_list['neutral']) - 1)]))
-            loop_count = 20
+            (cmd, item_name) = goal.data.split(':')
+            if cmd == 'tag':
+                rospy.loginfo('\033[94m[%s]\033[0m rendering gesture cmd [%s], name [%s]...'%(rospy.get_name(),
+                    cmd,
+                    self.motion_list[item_name][random.randint(0, len(self.motion_list[item_name]) - 1)]))
+            elif cmd == 'play':
+                find_result = False
+                for k, v in self.motion_list.items():
+                    if item_name in v:
+                        find_result = True
+
+                if find_result:
+                    rospy.loginfo('\033[94m[%s]\033[0m rendering gesture cmd [%s], name [%s]...'%(rospy.get_name(),
+                        cmd, item_name))
+                else:
+                    rospy.logwarn('\033[94m[%s]\033[0m rendering gesture cmd [%s], name [%s]...'%(rospy.get_name(),
+                        cmd,
+                        self.motion_list['neutral'][random.randint(0, len(self.motion_list['neutral']) - 1)]))
+
+            loop_count = 40
         if 'render_speech' in rospy.get_name():
             rospy.loginfo('\033[94m[%s]\033[0m rendering speech [%s]...'%(rospy.get_name(), goal.data))
-            loop_count = 10
+            loop_count = 40
 
         while not rospy.is_shutdown():
             if self.server.is_preempt_requested():

@@ -53,7 +53,7 @@ class MotionArbiter:
     def __init__(self):
         self.is_rendering = False
 
-        rospy.loginfo('Waiting for bringup social_mind...')
+        rospy.loginfo('\033[91m[%s]\033[0m waiting for bringup social_mind...'%rospy.get_name())
         try:
             rospy.wait_for_service('social_events_memory/read_data')
         except rospy.exceptions.ROSInterruptException as e:
@@ -61,7 +61,7 @@ class MotionArbiter:
             quit()
 
         self.renderer_client = actionlib.SimpleActionClient('render_scene', RenderSceneAction)
-        rospy.loginfo('Waiting for motion_renderer to start...')
+        rospy.loginfo('\033[91m[%s]\033[0m waiting for motion_renderer to start...'%rospy.get_name())
 
         try:
             self.renderer_client.wait_for_server()
@@ -88,7 +88,7 @@ class MotionArbiter:
         self.scene_handle_thread = Thread(target=self.handle_scene_queue)
         self.scene_handle_thread.start()
 
-        rospy.loginfo("[%s] Initialized." % rospy.get_name())
+        rospy.loginfo("\033[91m[%s]\033[0m initialized." % rospy.get_name())
 
     def handle_domain_reply(self, msg):
         scene_item = SceneQueueData()
@@ -99,7 +99,7 @@ class MotionArbiter:
         scene_item.sm['offset'] = 0.0
 
         scene_item.emotion = {}
-        overriding = 0
+        overriding = OverridingType.QUEUE
 
         for tag in tags:
             tag_msg = recv_msg
@@ -149,12 +149,12 @@ class MotionArbiter:
                 rospy.sleep(0.1)
             self.scene_queue.put(scene_item)
 
+
     def handle_scene_queue(self):
         rospy.wait_for_service('social_events_memory/read_data')
         rd_memory = rospy.ServiceProxy('social_events_memory/read_data', ReadData)
 
         while not rospy.is_shutdown():
-			# Handling the scene_queue that received from domain...
             if not self.scene_queue.empty():
                 goal = RenderSceneGoal()
                 scene_dict = {}
@@ -190,7 +190,7 @@ class MotionArbiter:
                     except rospy.ServiceException, e:
                         rospy.logerr("Service call failed: %s" % e)
                     except ValueError:
-                        goal.gesture = 'sm:neutral'
+                        goal.gesture = 'tag:neutral'
                 else:
                     scene_dict['sm'] = scene_item.sm
 
@@ -226,7 +226,6 @@ class MotionArbiter:
                 scene_dict['emotion']['current_emotion'] = 'netural'
                 scene_dict['emotion']['intensity'] = 1.0
 
-
                 # if scene.gaze != {}:
                 #     gaze_msg = GazeFocusing()
                 #     gaze_msg.target_name = motion.gaze_target
@@ -234,19 +233,19 @@ class MotionArbiter:
                 #     self.gazefocus_pub.publish(gaze_msg)
 
                 self.scene_queue.task_done()
-
                 goal.render_scene = json.dumps(scene_dict)
-
                 self.renderer_client.send_goal(goal, done_cb=self.render_done, feedback_cb=self.render_feedback, active_cb=self.render_active)
-                while self.renderer_client.get_state() == actionlib.GoalStatus.ACTIVE:
+
+                while not rospy.is_shutdown() and not self.is_rendering:
                     pass
-                while self.is_rendering:
-                    rospy.sleep(0.1)
+
+                while not rospy.is_shutdown() and self.is_rendering:
+                    rospy.sleep(0.2)
             else:
-                rospy.sleep(0.1)
+                rospy.sleep(0.2)
 
     def render_active(self):
-        rospy.loginfo('Scene rendering started...')
+        rospy.loginfo('\033[91m[%s]\033[0m scene rendering started...'%rospy.get_name())
         self.is_rendering = True
 
         # try:
@@ -258,11 +257,11 @@ class MotionArbiter:
         #     pass
 
     def render_feedback(self, feedback):
-        rospy.loginfo('Scene rendering feedback...')
+        rospy.loginfo('\033[91m[%s]\033[0m scene rendering feedback...'%rospy.get_name())
         pass
 
     def render_done(self, state, result):
-        rospy.loginfo('Scene rendering done...')
+        rospy.loginfo('\033[91m[%s]\033[0m scene rendering done...'%rospy.get_name())
         self.is_rendering = False
 
         # try:
