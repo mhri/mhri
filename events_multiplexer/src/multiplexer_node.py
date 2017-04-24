@@ -35,10 +35,7 @@ class MultiplexerNode:
             req.query = '{}'
             req.data.append('recognized_word')
 
-            result = self.rd_event_mem(req)
-
-            print result
-
+            result = self.rd_event_mem(req)            
             if result.result:
                 result = json.loads(result.data)
                 self.recognized_words_queue.put(result['recognized_word'])
