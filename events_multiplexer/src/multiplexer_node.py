@@ -32,9 +32,13 @@ class MultiplexerNode:
         if msg.event == 'speech_recognized':
             req = ReadDataRequest()
             req.perception_name = 'speech_recognition'
-            req.query.append('recognized_word')
+            req.query = '{}'
+            req.data.append('recognized_word')
 
             result = self.rd_event_mem(req)
+
+            print result
+
             if result.result:
                 result = json.loads(result.data)
                 self.recognized_words_queue.put(result['recognized_word'])

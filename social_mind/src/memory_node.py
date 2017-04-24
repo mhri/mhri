@@ -94,9 +94,7 @@ class MemoryNode:
 
     def handle_read_data(self, req):
         query_result = []
-        #for data in self.collections[str(req.perception_name)].find().sort('_id', pymongo.DESCENDING).limit(1):
-        #    query_result = data
-        for data in self.collections[str(req.perception_name)].find().sort('time', pymongo.DESCENDING):
+        for data in self.collections[str(req.perception_name)].find(json.loads(req.query)).sort('time', pymongo.DESCENDING):
             query_result.append(data)
 
         res = ReadDataResponse()
@@ -110,16 +108,14 @@ class MemoryNode:
             data['time'] = float(data['time'].strftime('%s.%f')) # Convert datetime to timestamp
 
         res.result = True
-        if len(req.query) == 0:
-            for i in query_result:
-                res.data.append(json.dumps(i))
-        elif len(req.query) == 1 and req.query[0] == '':
-            res.data = json.dumps(query_result)
+        if (len(req.data) == 0) or (len(req.data) == 1 and req.data[0] == ''):
+            res.data = json.dumps(query_result[0])
         else:
             ret_data = {}
-            for item in req.query:
-                ret_data[item] = query_result[item]
+            for item in req.data:
+                ret_data[item] = query_result[0][item]
             res.data = json.dumps(ret_data)
+
         return res
 
     def handle_write_data(self, req):
