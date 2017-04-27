@@ -54,8 +54,14 @@ class MotionArbiter:
         self.is_rendering = False
 
         rospy.loginfo('\033[91m[%s]\033[0m waiting for bringup social_mind...'%rospy.get_name())
+        self.rd_memory = {}
         try:
             rospy.wait_for_service('social_events_memory/read_data')
+            self.rd_memory['social_events_memory'] = rospy.ServiceProxy('social_events_memory/read_data', ReadData)
+            rospy.wait_for_service('environmental_memory/read_data')
+            self.rd_memory['environmental_memory'] = rospy.ServiceProxy('environmental_memory/read_data', ReadData)
+            rospy.wait_for_service('system_events_memory/read_data')
+            self.rd_memory['system_events_memory'] = rospy.ServiceProxy('system_events_memory/read_data', ReadData)
         except rospy.exceptions.ROSInterruptException as e:
             rospy.logerr(e)
             quit()
@@ -162,46 +168,54 @@ class MotionArbiter:
 
                 # Point and Semantic motion are exclusive relationship. If pointing exists, sm is ignored.
                 if scene_item.pointing != {}:
-                    # X, Y, Z, frame_id
+                    target_data = scene_item.pointing['render'].split(':')
                     try:
-                        rd_data = ReadDataRequest()
-                        rd_data.event_name = 'person_identification'
-                        rd_data.data.append('session_face_id')
-                        rd_data.data.append('face_pos')
-                        resp1 = rd_memory(rd_data)
+                        req = ReadDataRequest()
+                        req.perception_name = target_data[0]
+                        req.query = '{"name": "%s"}'%target_data[1]
+                        req.data.append('xyz')
+                        req.data.append('frame_id')
+                        response = self.rd_memory['environmental_memory'](req)
 
-                        rospy.logdebug("Read From Social Memory: %s"%resp1)
-                        recv_data = json.loads(resp1.data)
-
-                        pos = recv_data['face_pos'][
-                            recv_data['session_face_id'].index(motion.point)]
-
-                        if abs(pos[0]) < 0.15:
-                            goal.gesture = 'pm:' + 'sm_pointing/front'
-                        elif pos[0] >= 0.15 and pos[0] < 0.5:
-                            goal.gesture = 'pm:' + 'sm_pointing/right_near'
-                        elif pos[0] <= -0.15 and pos[0] > -0.5:
-                            goal.gesture = 'pm:' + 'sm_pointing/left_near'
-                        elif pos[0] >= 0.5:
-                            goal.gesture = 'pm:' + 'sm_pointing/right_far'
-                        elif pos[0] <= -0.5:
-                            goal.gesture = 'pm:' + 'sm_pointing/left_far'
+                        if response.result:
+                            rospy.logdebug("read from social_mind for %s: %s"%(target_data[1], response.data))
+                            scene_item.pointing['render'] = 'pointing/' + response.data
+                            scene_dict['sm'] = scene_item.pointing
+                        else:
+                            rospy.logwarn("Can't find the information if %s"%target_data[1])
+                            scene_dict['sm'] = {'render': 'gesture/tag:neutral', 'offset': scene_item.pointing['offset']}
 
                     except rospy.ServiceException, e:
-                        rospy.logerr("Service call failed: %s" % e)
+                        rospy.logerr("service call failed: %s" % e)
                     except ValueError:
-                        goal.gesture = 'tag:neutral'
+                        scene_dict['sm'] = {'render': 'gesture/tag:neutral', 'offset': scene_item.pointing['offset']}
                 else:
-                    scene_dict['sm'] = scene_item.sm
+                    scene_dict['sm'] = {'render': 'gesture/tag:neutral', 'offset': 0.0}
 
                 if scene_item.gaze != {}:
-                    pass
+                    target_data = scene_item.gaze['render'].split(':')
+                    try:
+                        req = ReadDataRequest()
+                        req.perception_name = target_data[0]
+                        req.query = '{"name": "%s"}'%target_data[1]
+                        req.data.append('xyz')
+                        req.data.append('frame_id')
+                        response = self.rd_memory['environmental_memory'](req)
+
+                        if response.result:
+                            rospy.logdebug("read from social_mind for %s: %s"%(target_data[1], response.data))
+                            scene_item.gaze['render'] = response.data
+                            scene_dict['gaze'] = scene_item.pointing
+                        else:
+                            rospy.logwarn("Can't find the information if %s"%target_data[1])
+
+                    except rospy.ServiceException, e:
+                        rospy.logerr("service call failed: %s" % e)
 
                 '''
                 sm = {}
                 say = ''
                 gaze = {}
-                pointing = {}
                 sound = {}
                 expression = {}
                 log = ''

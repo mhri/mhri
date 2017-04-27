@@ -11,4 +11,6 @@
 
     <node name="motion_arbiter" type="motion_arbiter.py" pkg="motion_arbiter" output="screen" />
     <node name="motion_renderer" type="motion_renderer.py" pkg="motion_renderer" output="screen" />
+
+    <node name="gaze" type="gaze_node.py" pkg="behaviors" output="screen" />
 </launch>

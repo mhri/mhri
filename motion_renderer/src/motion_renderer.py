@@ -105,7 +105,7 @@ class MotionRenderer:
         render_scene_time = {}
         for k, v in render_scene.items():
             if v != {} and k != 'emotion':
-                render_scene_time[k] = v['offset']
+                render_scene_time[k] = v['offset']        
 
         # Sort by delay time
         scene_item_sorted_by_time = sorted(render_scene_time, key=render_scene_time.get)

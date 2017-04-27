@@ -94,13 +94,16 @@ class MemoryNode:
 
     def handle_read_data(self, req):
         query_result = []
-        for data in self.collections[str(req.perception_name)].find(json.loads(req.query)).sort('time', pymongo.DESCENDING):
-            query_result.append(data)
+        try:
+            for data in self.collections[str(req.perception_name)].find(json.loads(req.query)).sort('time', pymongo.DESCENDING):
+                query_result.append(data)
+        except KeyError as e:
+            query_result = []
 
         res = ReadDataResponse()
         if len(query_result) == 0:
             res.result = False
-            res.data = []
+            res.data = '{}'
             return res
 
         for data in query_result:
@@ -126,7 +129,7 @@ class MemoryNode:
 
         if rospy.get_name() == '/environmental_memory':
             self.collections[req.perception_name].update_one(
-                {'object_name':write_data['object_name']}, {'$set': write_data}, upsert=True)
+                {'name':write_data['name']}, {'$set': write_data}, upsert=True)
         else:
             self.collections[req.perception_name].insert_one(write_data)
         return WriteDataResponse(True)
