@@ -92,10 +92,7 @@ class PerceptionBase(object):
         for item in data.keys():
             if not item in self.conf_data[perception_name]['data'].keys():
                 rospy.logwarn('Wrong data inserted...')
-                return
-
-        #if not self.is_enable_perception:
-        #    return
+                return        
 
         srv_req = WriteDataRequest()
         srv_req.perception_name = perception_name
@@ -103,7 +100,11 @@ class PerceptionBase(object):
         srv_req.by = rospy.get_name()
 
         target_memory = self.conf_data[perception_name]['target_memory']
-        self.dict_srv_wr[target_memory](srv_req)
+
+        try:
+            self.dict_srv_wr[target_memory](srv_req)
+        except rospy.ServiceException as e:
+            pass
 
     def read_from_memory(self, target_memory, data):
         pass
