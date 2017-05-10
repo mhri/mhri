@@ -7,7 +7,7 @@ import json
 import rospy
 from mhri_msgs.msg import ForwardingEvent
 from mhri_msgs.srv import WriteData, WriteDataRequest, ReadData, RegisterData, RegisterDataRequest
-from std_srvs.srv import Empty
+from std_msgs.msg import Empty
 
 
 class PerceptionBase(object):
@@ -41,18 +41,18 @@ class PerceptionBase(object):
                 self.register_data_to_memory(memory_name, item, self.conf_data[item]['data'])
 
         self.is_enable_perception = True
-        self.srv_start = rospy.Service('%s/start'%rospy.get_name(), Empty, self.handle_start_perception)
-        self.srv_stop = rospy.Service('%s/stop'%rospy.get_name(), Empty, self.handle_stop_perception)
+        rospy.Subscriber('%s/start'%rospy.get_name(), Empty, self.handle_start_perception)
+        rospy.Subscriber('%s/stop'%rospy.get_name(), Empty, self.handle_start_perception)
 
         self.pub_event = rospy.Publisher('forwarding_event', ForwardingEvent, queue_size=10)
         rospy.loginfo('\033[94m[%s]\033[0m initialize perception_base done...'%rospy.get_name())
 
 
-    def handle_start_perception(self, req):
+    def handle_start_perception(self, msg):
         self.is_enable_perception = True
         rospy.logdebug('%s is enabled...'%rospy.get_name())
 
-    def handle_stop_perception(self, req):
+    def handle_stop_perception(self, msg):
         self.is_enable_perception = False
         rospy.logdebug('%s is disabled...'%rospy.get_name())
 
@@ -92,7 +92,7 @@ class PerceptionBase(object):
         for item in data.keys():
             if not item in self.conf_data[perception_name]['data'].keys():
                 rospy.logwarn('Wrong data inserted...')
-                return        
+                return
 
         srv_req = WriteDataRequest()
         srv_req.perception_name = perception_name
