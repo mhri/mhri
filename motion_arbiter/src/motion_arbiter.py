@@ -79,6 +79,10 @@ class MotionArbiter:
         self.pub_start_speech_recognizer = rospy.Publisher('speech_recognizer/start', Empty, queue_size=1)
         self.pub_stop_speech_recognizer = rospy.Publisher('speech_recognizer/stop', Empty, queue_size=1)
 
+        self.is_speaking_started = False
+        rospy.Subscriber('start_of_speech', Empty, self.handle_start_of_speech)
+        rospy.Subscriber('end_of_speech', Empty, self.handle_end_of_speech)
+
         # self.gazefocus_pub = rospy.Publisher('gaze_focusing', GazeFocusing, queue_size=5)
 
         # rospy.Subscriber('emotion_status', EmotionStatus, self.handle_emotion_status, queue_size=10)
@@ -97,6 +101,12 @@ class MotionArbiter:
         self.scene_handle_thread.start()
 
         rospy.loginfo("\033[91m[%s]\033[0m initialized." % rospy.get_name())
+
+    def handle_start_of_speech(self, msg):
+        self.is_speaking_started = True
+
+    def handle_end_of_speech(self, msg):
+        self.is_speaking_started = False        
 
     def handle_domain_reply(self, msg):
         scene_item = SceneQueueData()
@@ -268,12 +278,14 @@ class MotionArbiter:
 
     def render_feedback(self, feedback):
         rospy.loginfo('\033[91m[%s]\033[0m scene rendering feedback...'%rospy.get_name())
-        pass
 
     def render_done(self, state, result):
         rospy.loginfo('\033[91m[%s]\033[0m scene rendering done...'%rospy.get_name())
         self.is_rendering = False
-        rospy.sleep(0.5)
+        rospy.sleep(1)
+        while self.is_speaking_started and not rospy.is_shutdown():
+            pass
+        rospy.sleep(1)
         self.pub_start_speech_recognizer.publish()
 
         #

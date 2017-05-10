@@ -88,7 +88,7 @@ class GazeNode:
                 target.point.y = random.randrange(-200, 200) / 100.0
 
                 # Publish
-                print target
+                # print target
 
                 self.idle_timecount = 0
                 self.idle_timeout = random.randrange(
