@@ -9,10 +9,9 @@ import json
 import operator
 from threading import Thread
 
-from std_msgs.msg import String, Bool
+from std_msgs.msg import String, Bool, Empty
 from mhri_msgs.msg import Reply
 from mhri_msgs.msg import RenderSceneAction, RenderSceneGoal, RenderItemGoal  # , GazeFocusing
-# from mhri_msgs.srv import EmptyResult
 from mhri_msgs.srv import ReadData, ReadDataRequest
 from mhri_msgs.msg import LogItem
 
@@ -76,6 +75,9 @@ class MotionArbiter:
 
         rospy.Subscriber('reply', Reply, self.handle_domain_reply)
         self.pub_log_item = rospy.Publisher('log', LogItem, queue_size=10)
+
+        self.pub_start_speech_recognizer = rospy.Publisher('speech_recognizer/start', Empty, queue_size=1)
+        self.pub_stop_speech_recognizer = rospy.Publisher('speech_recognizer/stop', Empty, queue_size=1)
 
         # self.gazefocus_pub = rospy.Publisher('gaze_focusing', GazeFocusing, queue_size=5)
 
@@ -261,14 +263,8 @@ class MotionArbiter:
     def render_active(self):
         rospy.loginfo('\033[91m[%s]\033[0m scene rendering started...'%rospy.get_name())
         self.is_rendering = True
+        self.pub_start_speech_recognizer.publish()
 
-        # try:
-        #     rospy.wait_for_service('speech_recognition/stop', 0.1)
-        #     asr_stop = rospy.ServiceProxy(
-        #         'speech_recognition/stop', EmptyResult)
-        #     asr_stop()
-        # except rospy.ROSException:
-        #     pass
 
     def render_feedback(self, feedback):
         rospy.loginfo('\033[91m[%s]\033[0m scene rendering feedback...'%rospy.get_name())
@@ -277,14 +273,8 @@ class MotionArbiter:
     def render_done(self, state, result):
         rospy.loginfo('\033[91m[%s]\033[0m scene rendering done...'%rospy.get_name())
         self.is_rendering = False
+        self.pub_stop_speech_recognizer.publish()
 
-        # try:
-        #     rospy.wait_for_service('speech_recognition/start', 0.1)
-        #     asr_start = rospy.ServiceProxy(
-        #         'speech_recognition/start', EmptyResult)
-        #     asr_start()
-        # except rospy.ROSException:
-        #     pass
         #
         # gaze_msg = GazeFocusing()
         # gaze_msg.target_name = ''
