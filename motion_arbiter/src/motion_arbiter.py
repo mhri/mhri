@@ -273,6 +273,7 @@ class MotionArbiter:
     def render_done(self, state, result):
         rospy.loginfo('\033[91m[%s]\033[0m scene rendering done...'%rospy.get_name())
         self.is_rendering = False
+        rospy.sleep(0.5)
         self.pub_start_speech_recognizer.publish()
 
         #
