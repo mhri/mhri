@@ -263,7 +263,7 @@ class MotionArbiter:
     def render_active(self):
         rospy.loginfo('\033[91m[%s]\033[0m scene rendering started...'%rospy.get_name())
         self.is_rendering = True
-        self.pub_start_speech_recognizer.publish()
+        self.pub_stop_speech_recognizer.publish()
 
 
     def render_feedback(self, feedback):
@@ -273,7 +273,7 @@ class MotionArbiter:
     def render_done(self, state, result):
         rospy.loginfo('\033[91m[%s]\033[0m scene rendering done...'%rospy.get_name())
         self.is_rendering = False
-        self.pub_stop_speech_recognizer.publish()
+        self.pub_start_speech_recognizer.publish()
 
         #
         # gaze_msg = GazeFocusing()
