@@ -13,6 +13,7 @@ from mhri_msgs.srv import ReadData, ReadDataRequest
 
 GAZE_CONTROLLER_PERIOD = 0.2
 GLANCE_TIMEOUT_MEAN = 3.0
+IDLE_TIMEOUT_MEAN = 4.0
 
 class GazeState:
     IDLE = 0
@@ -29,10 +30,15 @@ class GazeNode:
         self.current_state = GazeState.IDLE
 
         # Initialize Variables
-        self.glance_timeout = random.randrange(
-            GLANCE_TIMEOUT_MEAN/GAZE_CONTROLLER_PERIOD, (GLANCE_TIMEOUT_MEAN+1.0)/GAZE_CONTROLLER_PERIOD)
+        self.glance_timeout = 0
         self.glance_timecount = 0
-        self.glace_played = False
+        self.glance_played = False
+
+        self.idle_timeout = 0
+        self.idle_timecount = 0
+        self.idle_played = False
+
+
 
         rospy.loginfo('\033[92m[%s]\033[0m waiting for bringup social_mind...'%rospy.get_name())
         rospy.wait_for_service('environmental_memory/read_data')
@@ -58,7 +64,7 @@ class GazeNode:
         if 'loud_sound_detected' in msg.events:
             self.last_state = self.current_state
             self.current_state = GazeState.GLANCE
-        elif 'person_appeared' in msg.events:
+        elif 'person_appeared' in msg.events or 'face_detected' in msg.events:
             self.last_state = self.current_state
             self.current_state = GazeState.TRACKING
         self.lock.release()
@@ -71,10 +77,31 @@ class GazeNode:
     def handle_gaze_controller(self, event):
         # 0.2ms (조정가능) 주기로 동작되는 컨트롤러 모드에 따라 동작을 달리한다.
         if self.current_state == GazeState.IDLE:
-            print "IDLE"
+            # 4 ~ 6초 간격으로 랜덤 타켓 포지션
+            if not self.idle_played:
+                target = PointStamped()
+                target.header.stamp = rospy.Time.now()
+                target.header.frame_id = 'base_footprint'
+
+                target.point.x = 2.0
+                target.point.z = random.randrange(-30, 30) / 100.0
+                target.point.y = random.randrange(-200, 200) / 100.0
+
+                # Publish
+                print target
+
+                self.idle_timecount = 0
+                self.idle_timeout = random.randrange(
+                    IDLE_TIMEOUT_MEAN/GAZE_CONTROLLER_PERIOD, (IDLE_TIMEOUT_MEAN+2.0)/GAZE_CONTROLLER_PERIOD)
+                self.idle_played = True
+            else:
+                self.idle_timecount += 1
+                if self.idle_timecount > self.idle_timeout:
+                    self.idle_timecount = 0
+                    self.idle_played = False
 
         elif self.current_state == GazeState.GLANCE:
-            if not self.glace_played:
+            if not self.glance_played:
                 req = ReadDataRequest()
                 req.perception_name = 'loud_sound_detection'
                 req.query = '{}'
@@ -100,11 +127,15 @@ class GazeNode:
 
                 # Publish (target)
                 rospy.loginfo('\033[92m[%s]\033[0m changed the state - [GLANCE]...'%rospy.get_name())
-                self.glace_played = True
+
+                self.glance_timecount = 0
+                self.glance_timeout = random.randrange(
+                    GLANCE_TIMEOUT_MEAN/GAZE_CONTROLLER_PERIOD, (GLANCE_TIMEOUT_MEAN+1.0)/GAZE_CONTROLLER_PERIOD)
+                self.glance_played = True
             else:
                 self.glance_timecount += 1
                 if self.glance_timecount > self.glance_timeout:
-                    self.glace_played = False
+                    self.glance_played = False
                     self.glance_timecount = 0
 
                     self.lock.acquire()
@@ -113,9 +144,14 @@ class GazeNode:
                     rospy.loginfo('\033[92m[%s]\033[0m return from GLANCE to last state...'%rospy.get_name())
 
         elif self.current_state == GazeState.FOCUSING:
+            # 도메인에서 내려오는 명령에 의한 모드
+            # 정해진 물체 혹은 사람을 지속적으로 쳐다봄
+            # 환경 메모리에서 물체/사람 정보를 얻어옴
             print "FOCUSING"
 
         elif self.current_state == GazeState.TRACKING:
+            # 환경 메모리에서 사람들에 대한 정보를 받아옴
+            # 1명일때, 2명 이상일때 플래닝 필요
             print "TRACKING"
 
 
