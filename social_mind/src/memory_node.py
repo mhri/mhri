@@ -113,6 +113,11 @@ class MemoryNode:
         res.result = True
         if (len(req.data) == 0) or (len(req.data) == 1 and req.data[0] == ''):
             res.data = json.dumps(query_result[0])
+        elif len(req.data) == 1 and req.data[0] == '~':
+            ret_data = []
+            for item in query_result:
+                ret_data.append(item)
+            res.data = json.dumps(ret_data)
         else:
             ret_data = {}
             for item in req.data:

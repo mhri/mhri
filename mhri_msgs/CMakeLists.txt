@@ -6,6 +6,7 @@ project(mhri_msgs)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   std_msgs
+  geometry_msgs
   message_generation
   actionlib_msgs
 )
@@ -51,6 +52,7 @@ add_message_files(
   Reply.msg
   ScriptStatus.msg
   LogItem.msg
+  GazeCommand.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -76,6 +78,7 @@ add_action_files(
 generate_messages(
   DEPENDENCIES
   actionlib_msgs
+  geometry_msgs
   std_msgs
 )
 

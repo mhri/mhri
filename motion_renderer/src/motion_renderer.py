@@ -7,6 +7,7 @@ import random
 import rospy
 import actionlib
 
+from std_msgs.msg import String
 from mhri_msgs.msg import RenderSceneAction, RenderSceneFeedback, RenderSceneResult
 from mhri_msgs.msg import RenderItemAction, RenderItemGoal
 from mhri_msgs.srv import GetInstalledGestures
@@ -32,6 +33,8 @@ class MotionRenderer:
             rospy.logerr(e)
             quit()
 
+        self.gazefocus_pub = rospy.Publisher('gaze_focusing', String, queue_size=10)
+
         self.render_client['say'] = actionlib.SimpleActionClient('render_speech', RenderItemAction)
         self.render_client['say'].wait_for_server()
 
@@ -55,6 +58,8 @@ class MotionRenderer:
         self.is_rendering['sm'] = False
         self.is_rendering['expression'] = False
         self.is_rendering['sound'] = False
+
+        self.return_to_last_expression = False
 
         # Register callback functions.
         self.cb_start['say'] = self.handle_render_say_start
@@ -105,7 +110,14 @@ class MotionRenderer:
         render_scene_time = {}
         for k, v in render_scene.items():
             if v != {} and k != 'emotion':
-                render_scene_time[k] = v['offset']        
+                render_scene_time[k] = v['offset']
+
+        try:
+            if render_scene['expression'] != {}:
+                # render_scene['expression']['render'] = render_scene['expression']['render'].rstrip('~')
+                self.return_to_last_expression = True
+        except KeyError:
+            pass
 
         # Sort by delay time
         scene_item_sorted_by_time = sorted(render_scene_time, key=render_scene_time.get)
@@ -113,39 +125,67 @@ class MotionRenderer:
         rospy.sleep(first_offset_time)
 
         for i in range(0, len(scene_item_sorted_by_time) - 1):
-            item_goal = RenderItemGoal()
-            item_goal.name = scene_item_sorted_by_time[i]
-            item_goal.data = render_scene[scene_item_sorted_by_time[i]]['render']
+            if scene_item_sorted_by_time[i] == 'gaze':
+                focusing_name = render_scene[scene_item_sorted_by_time[i]]['render']
+                self.gazefocus_pub.publish(focusing_name)
+            else:
+                item_goal = RenderItemGoal()
+                item_goal.name = scene_item_sorted_by_time[i]
+                item_goal.data = render_scene[scene_item_sorted_by_time[i]]['render']
 
-            self.render_client[scene_item_sorted_by_time[i]].send_goal(
-                goal=item_goal,
-                done_cb=self.cb_done[scene_item_sorted_by_time[i]],
-                active_cb=self.cb_start[scene_item_sorted_by_time[i]])
+                self.render_client[scene_item_sorted_by_time[i]].send_goal(
+                    goal=item_goal,
+                    done_cb=self.cb_done[scene_item_sorted_by_time[i]],
+                    active_cb=self.cb_start[scene_item_sorted_by_time[i]])
 
-            while not rospy.is_shutdown() and not self.is_rendering[scene_item_sorted_by_time[i]]:
-                pass
+                while not rospy.is_shutdown() and not self.is_rendering[scene_item_sorted_by_time[i]]:
+                    rospy.sleep(0.01)
+                    pass
 
             delta_time = render_scene[scene_item_sorted_by_time[i+1]]['offset'] - render_scene[scene_item_sorted_by_time[i]]['offset']
             rospy.sleep(delta_time)
 
-        item_goal = RenderItemGoal()
-        item_goal.name = scene_item_sorted_by_time[-1]
-        item_goal.data = render_scene[scene_item_sorted_by_time[-1]]['render']
+        if scene_item_sorted_by_time[-1] == 'gaze':
+            focusing_name = render_scene[scene_item_sorted_by_time[-1]]['render']
+            self.gazefocus_pub.publish(focusing_name)
+        else:
+            item_goal = RenderItemGoal()
+            item_goal.name = scene_item_sorted_by_time[-1]
+            item_goal.data = render_scene[scene_item_sorted_by_time[-1]]['render']
 
-        self.render_client[scene_item_sorted_by_time[-1]].send_goal(
-            goal=item_goal,
-            done_cb=self.cb_done[scene_item_sorted_by_time[-1]],
-            active_cb=self.cb_start[scene_item_sorted_by_time[-1]])
+            self.render_client[scene_item_sorted_by_time[-1]].send_goal(
+                goal=item_goal,
+                done_cb=self.cb_done[scene_item_sorted_by_time[-1]],
+                active_cb=self.cb_start[scene_item_sorted_by_time[-1]])
 
-        while not rospy.is_shutdown() and not self.is_rendering[scene_item_sorted_by_time[-1]]:
-            pass
+            while not rospy.is_shutdown() and not self.is_rendering[scene_item_sorted_by_time[-1]]:
+                rospy.sleep(0.01)
+                pass
 
         while not rospy.is_shutdown():
             rendering = False
             for i in scene_item_sorted_by_time:
-                rendering = rendering or self.is_rendering[i]
+                if i != 'gaze':
+                    rendering = rendering or self.is_rendering[i]
             if not rendering:
                 break
+            rospy.sleep(0.1)
+        self.gazefocus_pub.publish('')
+
+        if self.return_to_last_expression:
+            item_goal = RenderItemGoal()
+            item_goal.name = 'expression'
+            item_goal.data = render_scene['emotion']['current_emotion']
+            self.render_client['expression'].send_goal(
+                goal=item_goal,
+                done_cb=self.cb_done['expression'],
+                active_cb=self.cb_start['expression'])
+
+            while not rospy.is_shutdown() and not self.is_rendering['expression']:
+                rospy.sleep(0.01)
+            while not rospy.is_shutdown() and self.is_rendering['expression']:
+                rospy.sleep(0.01)
+            self.return_to_last_expression = False
 
         '''
 		if goal.emotion == 'neutral':

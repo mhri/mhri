@@ -16,7 +16,7 @@ from mhri_msgs.srv import ReadData, ReadDataRequest
 from mhri_msgs.msg import LogItem
 
 MAX_QUEUE_SIZE = 10
-TIME_FOR_CHARACTER = 0.3
+TIME_FOR_CHARACTER = 0.18
 SIZE_FOR_CHARACTER = 3
 
 
@@ -34,6 +34,15 @@ class SceneQueueData:
     expression = {}
     log = ''
 
+    def __init__(self):
+        self.sm = {}
+        self.say = {}
+        self.gaze = {}
+        self.pointing = {}
+        self.sound = {}
+        self.expression = {}
+        self.log = ''
+
     def __str__(self):
         rospy.loginfo('='*10)
         print ' [SM]        : ', self.sm
@@ -45,7 +54,6 @@ class SceneQueueData:
         print ' [LOG]       : ', self.log
         rospy.loginfo('-'*10)
         return ''
-
 
 class MotionArbiter:
 
@@ -83,18 +91,12 @@ class MotionArbiter:
         rospy.Subscriber('start_of_speech', Empty, self.handle_start_of_speech)
         rospy.Subscriber('end_of_speech', Empty, self.handle_end_of_speech)
 
-        # self.gazefocus_pub = rospy.Publisher('gaze_focusing', GazeFocusing, queue_size=5)
-
         # rospy.Subscriber('emotion_status', EmotionStatus, self.handle_emotion_status, queue_size=10)
         # self.current_emotion = 'neutral'
         # self.current_emotion_intensity = 1.0
 
-        # rospy.wait_for_service('idle_motion/is_ready')
-        # self.pub_set_idle_motion = rospy.Publisher('idle_motion/set_status', Bool, queue_size=10)
-
-        #
-
-        # self.pub_set_idle_motion.publish(True)
+        self.pub_set_idle_motion = rospy.Publisher('idle_motion/set_enabled', Bool, queue_size=10)
+        self.pub_set_idle_motion.publish(True)
 
         self.scene_queue = Queue.Queue(MAX_QUEUE_SIZE)
         self.scene_handle_thread = Thread(target=self.handle_scene_queue)
@@ -106,7 +108,7 @@ class MotionArbiter:
         self.is_speaking_started = True
 
     def handle_end_of_speech(self, msg):
-        self.is_speaking_started = False        
+        self.is_speaking_started = False
 
     def handle_domain_reply(self, msg):
         scene_item = SceneQueueData()
@@ -116,6 +118,11 @@ class MotionArbiter:
         scene_item.sm['render'] = 'tag:neutral'
         scene_item.sm['offset'] = 0.0
 
+        scene_item.expression['render'] ='neutral'
+        scene_item.expression['offset'] = 0.0
+
+        scene_item.pointing = {}
+        scene_item.gaze = {}
         scene_item.emotion = {}
         overriding = OverridingType.QUEUE
 
@@ -177,6 +184,7 @@ class MotionArbiter:
                 goal = RenderSceneGoal()
                 scene_dict = {}
                 scene_item = self.scene_queue.get()
+                self.scene_queue.task_done()
 
                 # Point and Semantic motion are exclusive relationship. If pointing exists, sm is ignored.
                 if scene_item.pointing != {}:
@@ -185,24 +193,29 @@ class MotionArbiter:
                         req = ReadDataRequest()
                         req.perception_name = target_data[0]
                         req.query = '{"name": "%s"}'%target_data[1]
+                        req.data.append('name')
                         req.data.append('xyz')
                         req.data.append('frame_id')
                         response = self.rd_memory['environmental_memory'](req)
 
                         if response.result:
                             rospy.logdebug("read from social_mind for %s: %s"%(target_data[1], response.data))
-                            scene_item.pointing['render'] = 'pointing/' + response.data
-                            scene_dict['sm'] = scene_item.pointing
+                            # scene_item.pointing['render'] = 'pointing=' + response.data
+                            scene_dict['sm'] = {}
+                            scene_dict['sm']['render'] = 'pointing=' + response.data
+                            scene_dict['sm']['offset'] = scene_item.pointing['offset']
                         else:
                             rospy.logwarn("Can't find the information if %s"%target_data[1])
-                            scene_dict['sm'] = {'render': 'gesture/tag:neutral', 'offset': scene_item.pointing['offset']}
+                            scene_dict['sm'] = {'render': 'gesture=tag:neutral', 'offset': scene_item.pointing['offset']}
 
                     except rospy.ServiceException, e:
                         rospy.logerr("service call failed: %s" % e)
                     except ValueError:
-                        scene_dict['sm'] = {'render': 'gesture/tag:neutral', 'offset': scene_item.pointing['offset']}
+                        scene_dict['sm'] = {'render': 'gesture=tag:neutral', 'offset': scene_item.pointing['offset']}
                 else:
-                    scene_dict['sm'] = {'render': 'gesture/tag:neutral', 'offset': 0.0}
+                    scene_dict['sm'] = {}
+                    scene_dict['sm']['render'] = 'gesture=' + scene_item.sm['render']
+                    scene_dict['sm']['offset'] = scene_item.sm['offset']
 
                 if scene_item.gaze != {}:
                     target_data = scene_item.gaze['render'].split(':')
@@ -210,14 +223,16 @@ class MotionArbiter:
                         req = ReadDataRequest()
                         req.perception_name = target_data[0]
                         req.query = '{"name": "%s"}'%target_data[1]
-                        req.data.append('xyz')
-                        req.data.append('frame_id')
+                        req.data.append('name')
+                        # req.data.append('xyz')
+                        # req.data.append('frame_id')
                         response = self.rd_memory['environmental_memory'](req)
 
                         if response.result:
-                            rospy.logdebug("read from social_mind for %s: %s"%(target_data[1], response.data))
-                            scene_item.gaze['render'] = response.data
-                            scene_dict['gaze'] = scene_item.pointing
+                            rospy.logdebug("read from environmental_memory for %s: %s"%(target_data[1], response.data))
+                            scene_dict['gaze'] = {}
+                            scene_dict['gaze']['render'] = response.data
+                            scene_dict['gaze']['offset'] = scene_item.gaze['offset']
                         else:
                             rospy.logwarn("Can't find the information if %s"%target_data[1])
 
@@ -246,29 +261,29 @@ class MotionArbiter:
                 scene_dict['say'] = scene_item.say
                 scene_dict['sound'] = scene_item.sound
                 scene_dict['expression'] = scene_item.expression
+                scene_dict['gaze'] = scene_item.gaze
 
                 # 감정은 소셜 메모리에서 읽어온다.
                 scene_dict['emotion'] = {}
-                scene_dict['emotion']['current_emotion'] = 'netural'
+                scene_dict['emotion']['current_emotion'] = 'neutral'
                 scene_dict['emotion']['intensity'] = 1.0
 
-                # if scene.gaze != {}:
-                #     gaze_msg = GazeFocusing()
-                #     gaze_msg.target_name = motion.gaze_target
-                #     gaze_msg.enable = True
-                #     self.gazefocus_pub.publish(gaze_msg)
+                self.pub_set_idle_motion.publish(False)
 
-                self.scene_queue.task_done()
                 goal.render_scene = json.dumps(scene_dict)
                 self.renderer_client.send_goal(goal, done_cb=self.render_done, feedback_cb=self.render_feedback, active_cb=self.render_active)
 
                 while not rospy.is_shutdown() and not self.is_rendering:
+                    rospy.sleep(0.1)
                     pass
 
                 while not rospy.is_shutdown() and self.is_rendering:
-                    rospy.sleep(0.2)
+                    rospy.sleep(0.1)
             else:
                 rospy.sleep(0.2)
+
+            self.pub_set_idle_motion.publish(True)
+            scene_item = {}
 
     def render_active(self):
         rospy.loginfo('\033[91m[%s]\033[0m scene rendering started...'%rospy.get_name())
@@ -285,16 +300,8 @@ class MotionArbiter:
         rospy.sleep(1)
         while self.is_speaking_started and not rospy.is_shutdown():
             pass
-        rospy.sleep(1)
+        rospy.sleep(0.5)
         self.pub_start_speech_recognizer.publish()
-
-        #
-        # gaze_msg = GazeFocusing()
-        # gaze_msg.target_name = ''
-        # gaze_msg.enable = False
-        # self.gazefocus_pub.publish(gaze_msg)
-
-
 
 if __name__ == '__main__':
     rospy.init_node('motion_arbiter', anonymous=False)
