@@ -169,9 +169,9 @@ class MotionArbiter:
         if overriding == OverridingType.QUEUE:
             self.scene_queue.put(scene_item)
         elif overriding == OverridingType.OVERRIDE:
-            if self.is_rendering:
-                self.renderer_client.cancel_all_goals()
-                rospy.sleep(0.1)
+            self.renderer_client.cancel_all_goals()
+            with self.scene_queue.mutex:
+                self.scene_queue.queue.clear()
             self.scene_queue.put(scene_item)
 
 
@@ -275,7 +275,6 @@ class MotionArbiter:
 
                 while not rospy.is_shutdown() and not self.is_rendering:
                     rospy.sleep(0.1)
-                    pass
 
                 while not rospy.is_shutdown() and self.is_rendering:
                     rospy.sleep(0.1)

@@ -65,12 +65,14 @@ class GazeNode:
 
         if 'loud_sound_detected' in msg.events:
             with self.lock:
-                self.last_state = self.current_state
-                self.current_state = GazeState.GLANCE
+                if self.current_state != GazeState.GLANCE:
+                    self.last_state = self.current_state
+                    self.current_state = GazeState.GLANCE
         elif 'person_appeared' in msg.events or 'face_detected' in msg.events:
             with self.lock:
-                self.last_state = self.current_state
-                self.current_state = GazeState.TRACKING
+                if self.current_state != GazeState.TRACKING:
+                    self.last_state = self.current_state
+                    self.current_state = GazeState.TRACKING
 
     def handle_gaze_focusing(self, msg):
         # 환경 메모리에서 전달된 이름에 대한 정보가 있는지 확인해보고, 있으면 타겟설정, 없으면 현재모드 유지
@@ -125,17 +127,21 @@ class GazeNode:
                     self.current_state = self.last_state
                     return
 
-                target = PointStamped()
-                target.header.frame_id = 'base_footprint'
+                result_data = json.loads(response.data)
 
-                target.point.x = 1.0
-                target.point.z = 0.6 + (random.randrange(0, 30) / 100.0)
-                if response.data['xyz'][1] < -0.2:   #Right Side
-                    target.point.y = -1.0 * random.randrange(10, 20) / 10.0
-                elif response.data['xyz'][1] > 0.2:   #Left Side
-                    target.point.y = random.randrange(10, 20) / 10.0
+                cmd = GazeCommand()
+                cmd.target_point.header.frame_id = result_data['frame_id']
+                cmd.target_point.point.x = 1.0
+                cmd.target_point.point.z = 0.6 + (random.randrange(0, 30) / 100.0)
+
+                if result_data['xyz'][1] < -0.2:   #Right Side
+                    cmd.target_point.point.y = -1.0 * random.randrange(10, 20) / 10.0
                 else:
-                    target.point.y = 0
+                    cmd.target_point.point.y = random.randrange(10, 20) / 10.0
+                cmd.max_speed = 0.8
+
+                self.pub_gaze_cmd.publish(cmd)
+                self.pub_viz_gaze_cmd.publish(cmd.target_point)
 
                 rospy.loginfo('\033[92m[%s]\033[0m changed the state - [GLANCE]...'%rospy.get_name())
 
@@ -154,7 +160,7 @@ class GazeNode:
                     self.lock.release()
                     rospy.loginfo('\033[92m[%s]\033[0m return from GLANCE to last state...'%rospy.get_name())
 
-        elif self.current_state == GazeState.FOCUSING:            
+        elif self.current_state == GazeState.FOCUSING:
             target_type = ''
             target_name = ''
 
