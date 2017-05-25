@@ -200,7 +200,36 @@ class GazeNode:
         elif self.current_state == GazeState.TRACKING:
             # 환경 메모리에서 사람들에 대한 정보를 받아옴
             # 1명일때, 2명 이상일때 플래닝 필요
-            print "TRACKING"
+            req = ReadDataRequest()
+            req.perception_name = 'face_detection'
+            req.query = '{}'
+            req.data.append('num_of_detected')
+            response = self.rd_memory['social_events_memory'](req)
+
+            result_data = json.loads(response.data)
+            if result_data['num_of_detected'] == 0:
+                with self.lock:
+                    self.current_state = self.last_state
+                return
+            else:
+                req = ReadDataRequest()
+                req.perception_name = 'persons'
+                req.query = '{}'
+                req.data = ['~']
+                response = self.rd_memory['environmental_memory'](req)
+
+                ret_data = json.loads(response.data)
+
+                cmd = GazeCommand()
+                cmd.target_point.header.frame_id = ret_data[0]['frame_id']
+                cmd.target_point.point.x = ret_data[0]['xyz'][0]
+                cmd.target_point.point.y = ret_data[0]['xyz'][1]
+                cmd.target_point.point.z = ret_data[0]['xyz'][2]
+                cmd.max_speed = 0.2
+
+                self.pub_gaze_cmd.publish(cmd)
+                self.pub_viz_gaze_cmd.publish(cmd.target_point)
+
 
 
 if __name__ == '__main__':
