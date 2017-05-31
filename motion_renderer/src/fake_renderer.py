@@ -57,10 +57,10 @@ class FakeMotionRender:
         feedback = RenderItemFeedback()
 
         success = True
-        loop_count = 0
+        loop_count = 0        
 
         if 'render_gesture' in rospy.get_name():
-            (gesture_category, gesture_item) = goal.data.split('/')
+            (gesture_category, gesture_item) = goal.data.split('=')
 
             if gesture_category == 'pointing':
                 parse_data = json.loads(gesture_item)
@@ -92,7 +92,7 @@ class FakeMotionRender:
             rospy.loginfo('\033[94m[%s]\033[0m rendering speech [%s]...'%(rospy.get_name(), goal.data))
             loop_count = 40
 
-        if 'render_expression' in rospy.get_name():
+        if 'render_facial_expression' in rospy.get_name():
             rospy.loginfo('\033[94m[%s]\033[0m rendering expression [%s]...'%(rospy.get_name(), goal.data))
             loop_count = 5
 

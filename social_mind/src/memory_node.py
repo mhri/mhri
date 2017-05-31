@@ -108,7 +108,10 @@ class MemoryNode:
 
         for data in query_result:
             del data['_id']
-            data['time'] = float(data['time'].strftime('%s.%f')) # Convert datetime to timestamp
+            try:
+                data['time'] = float(data['time'].strftime('%s.%f')) # Convert datetime to timestamp
+            except KeyError:
+                pass
 
         res.result = True
         if (len(req.data) == 0) or (len(req.data) == 1 and req.data[0] == ''):
@@ -132,7 +135,7 @@ class MemoryNode:
         write_data['time'] = datetime.datetime.fromtimestamp(rospy.get_time())
         write_data['by'] = req.by
 
-        if rospy.get_name() == '/environmental_memory':
+        if rospy.get_name() == '/environmental_memory' and req.perception_name != 'objects_info':
             self.collections[req.perception_name].update_one(
                 {'name':write_data['name']}, {'$set': write_data}, upsert=True)
         else:
