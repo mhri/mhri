@@ -102,6 +102,7 @@ class PerceptionBase(object):
         target_memory = self.conf_data[perception_name]['target_memory']
 
         try:
+            rospy.wait_for_service('/%s/write_data'%target_memory)
             self.dict_srv_wr[target_memory](srv_req)
         except rospy.ServiceException as e:
             pass

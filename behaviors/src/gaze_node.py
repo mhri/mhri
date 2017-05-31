@@ -13,7 +13,7 @@ from mhri_msgs.srv import ReadData, ReadDataRequest
 
 
 GAZE_CONTROLLER_PERIOD = 0.2
-GLANCE_TIMEOUT_MEAN = 3.0
+GLANCE_TIMEOUT_MEAN = 5.0
 IDLE_TIMEOUT_MEAN = 4.0
 
 class GazeState:
@@ -130,7 +130,7 @@ class GazeNode:
                 result_data = json.loads(response.data)
 
                 cmd = GazeCommand()
-                cmd.target_point.header.frame_id = result_data['frame_id']
+                cmd.target_point.header.frame_id = 'base_footprint'#result_data['frame_id']
                 cmd.target_point.point.x = 1.0
                 cmd.target_point.point.z = 0.6 + (random.randrange(0, 30) / 100.0)
 
@@ -138,7 +138,7 @@ class GazeNode:
                     cmd.target_point.point.y = -1.0 * random.randrange(10, 20) / 10.0
                 else:
                     cmd.target_point.point.y = random.randrange(10, 20) / 10.0
-                cmd.max_speed = 0.8
+                cmd.max_speed = 1.0
 
                 self.pub_gaze_cmd.publish(cmd)
                 self.pub_viz_gaze_cmd.publish(cmd.target_point)
