@@ -108,4 +108,19 @@ class PerceptionBase(object):
             pass
 
     def read_from_memory(self, target_memory, data):
-        pass
+        if data == {}:
+            rospy.logwarn('Empty data requested...')
+            return
+
+        req = ReadDataRequest()
+        req.perception_name = data['perception_name']
+        req.query = data['query']
+        for item in data['data']:
+            req.data.append(item)
+
+        resonse = self.dict_srv_rd[target_memory](req)
+        if not response.result:
+            return {}
+
+        results = json.loads(response.data)
+        return results      
