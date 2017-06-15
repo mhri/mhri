@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
-    <name>perception_core</name>
+    <name>perception_base</name>
     <version>0.0.0</version>
-    <description>Perception Core class.</description>
+    <description>Perception Base class.</description>
 
     <maintainer email="byeongkyu@gmail.com">Byeong-Kyu Ahn</maintainer>
     <license>BSD</license>
