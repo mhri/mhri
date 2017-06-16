@@ -5,6 +5,7 @@ import json
 import rospy
 import actionlib
 import random
+import re
 
 from mhri_msgs.msg import RenderItemAction, RenderItemResult, RenderItemFeedback
 from mhri_msgs.srv import GetInstalledGestures, GetInstalledGesturesResponse
@@ -57,7 +58,7 @@ class FakeMotionRender:
         feedback = RenderItemFeedback()
 
         success = True
-        loop_count = 0        
+        loop_count = 0
 
         if 'render_gesture' in rospy.get_name():
             (gesture_category, gesture_item) = goal.data.split('=')
@@ -70,9 +71,29 @@ class FakeMotionRender:
             elif gesture_category == 'gesture':
                 (cmd, item_name) = gesture_item.split(':')
                 if cmd == 'tag':
-                    rospy.loginfo('\033[94m[%s]\033[0m rendering gesture cmd [%s], name [%s]...'%(rospy.get_name(),
-                        cmd,
-                        self.motion_list[item_name][random.randint(0, len(self.motion_list[item_name]) - 1)]))
+                    match = re.search(r'\[(.+?)\]', item_name)
+                    if match:
+                        item_name = item_name.replace(match.group(0), '')
+                        emotion = match.group(1)
+
+                        try:
+                            rospy.loginfo('\033[94m[%s]\033[0m rendering gesture cmd [%s], name [%s]...'%(rospy.get_name(),
+                                cmd,
+                                self.motion_list[item_name][emotion][random.randint(0, len(self.motion_list[item_name]) - 1)]))
+                        except (KeyError, TypeError):
+                            rospy.loginfo('\033[94m[%s]\033[0m rendering gesture cmd [%s], name [%s]...'%(rospy.get_name(),
+                                cmd,
+                                self.motion_list[item_name][random.randint(0, len(self.motion_list[item_name]) - 1)]))
+                    else:
+                        try:
+                            rospy.loginfo('\033[94m[%s]\033[0m rendering gesture cmd [%s], name [%s]...'%(rospy.get_name(),
+                                cmd,
+                                self.motion_list[item_name][random.randint(0, len(self.motion_list[item_name]) - 1)]))
+                        except KeyError:
+                            rospy.logwarn('\033[94m[%s]\033[0m rendering gesture cmd [%s], name [%s]...'%(rospy.get_name(),
+                                cmd,
+                                self.motion_list['neutral'][random.randint(0, len(self.motion_list['neutral']) - 1)]))
+
                 elif cmd == 'play':
                     find_result = False
                     for k, v in self.motion_list.items():
