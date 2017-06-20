@@ -24,7 +24,7 @@ class PerceptionBase(object):
             self.conf_data = yaml.load(f.read())
             rospy.loginfo('loading perception config file... %d perception(s) exists...'%len(self.conf_data.keys()))
             for item in self.conf_data.keys():
-                rospy.loginfo('\033[92m  - %s: %d event(s) and %d data(s).\033[0m'%(item, len(self.conf_data[item]['events']), len(self.conf_data[item]['data'])))                
+                rospy.loginfo('\033[92m  - %s: %d event(s) and %d data(s).\033[0m'%(item, len(self.conf_data[item]['events']), len(self.conf_data[item]['data'])))
 
         self.dict_srv_wr = {}
         self.dict_srv_rd = {}
@@ -91,7 +91,7 @@ class PerceptionBase(object):
 
         for item in data.keys():
             if not item in self.conf_data[perception_name]['data'].keys():
-                rospy.logwarn('Wrong data inserted...')
+                rospy.logwarn('[%s -- wrong data inserted [%s]...'%(perception_name, item))
                 return
 
         srv_req = WriteDataRequest()
