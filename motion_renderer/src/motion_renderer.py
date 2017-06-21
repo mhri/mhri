@@ -109,7 +109,7 @@ class MotionRenderer:
         render_scene = json.loads(goal.render_scene)
         render_scene_time = {}
         for k, v in render_scene.items():
-            if v != {} and k != 'emotion':
+            if v != {} and k != 'emotion' and k != 'br':
                 render_scene_time[k] = v['offset']
 
         try:
@@ -118,6 +118,11 @@ class MotionRenderer:
                 self.return_to_last_expression = True
         except KeyError:
             pass
+
+        delay_time = render_scene['br']['time']
+
+        for i in range(delay_time * 10):
+            rospy.sleep(0.1)
 
         # Sort by delay time
         scene_item_sorted_by_time = sorted(render_scene_time, key=render_scene_time.get)

@@ -32,6 +32,7 @@ class SceneQueueData:
     pointing = {}
     sound = {}
     expression = {}
+    br = {}
     log = ''
 
     def __init__(self):
@@ -41,6 +42,7 @@ class SceneQueueData:
         self.pointing = {}
         self.sound = {}
         self.expression = {}
+        self.br = {}
         self.log = ''
 
     def __str__(self):
@@ -51,6 +53,7 @@ class SceneQueueData:
         print ' [POINTING]  : ', self.pointing
         print ' [SOUND]     : ', self.sound
         print ' [EXPRESSION]: ', self.expression
+        print ' [BR]        : ', self.br
         print ' [LOG]       : ', self.log
         rospy.loginfo('-'*10)
         return ''
@@ -87,6 +90,9 @@ class MotionArbiter:
         self.pub_start_speech_recognizer = rospy.Publisher('speech_recognizer/start', Empty, queue_size=1)
         self.pub_stop_speech_recognizer = rospy.Publisher('speech_recognizer/stop', Empty, queue_size=1)
 
+        self.pub_start_robot_speech = rospy.Publisher('robot_speech/start', Empty, queue_size=1)
+        self.pub_stop_robot_speech = rospy.Publisher('robot_speech/stop', Empty, queue_size=1)
+
         self.is_speaking_started = False
         rospy.Subscriber('start_of_speech', Empty, self.handle_start_of_speech)
         rospy.Subscriber('end_of_speech', Empty, self.handle_end_of_speech)
@@ -111,68 +117,91 @@ class MotionArbiter:
         self.is_speaking_started = False
 
     def handle_domain_reply(self, msg):
-        scene_item = SceneQueueData()
         recv_msg = msg.reply
-        tags = re.findall('(<[^>]+>)', recv_msg)
 
-        scene_item.sm['render'] = 'tag:neutral'
-        scene_item.sm['offset'] = 0.0
+        # 메시지 중에 <br=?> 태그가 있는 경우, 씬을 분리하고, 뒤쪽의 씬에 Delay 옵션을 줘야 한다.
+        reply_list = []
+        br_tags = re.findall('(<br=[^>]+>)', recv_msg)
 
-        scene_item.expression['render'] ='neutral'
-        scene_item.expression['offset'] = 0.0
+        if len(br_tags) == 0:
+            reply_list = [(recv_msg, 0)]
+        else:
+            split_target = recv_msg
+            for i in range(len(br_tags)):
+                if i == 0:
+                    reply_list.append( (split_target.split(br_tags[i], 1)[0], 0) )
+                else:
+                    reply_list.append( (split_target.split(br_tags[i], 1)[0], int(br_tags[i-1].split('=')[-1].rstrip('>'))) )
+                split_target = split_target.split(br_tags[i], 1)[1]
+            reply_list.append( (split_target.split(br_tags[-1], 1)[0], int(br_tags[i-1].split('=')[-1].rstrip('>'))) )
 
-        scene_item.pointing = {}
-        scene_item.gaze = {}
-        scene_item.emotion = {}
-        overriding = OverridingType.QUEUE
+        for recv_reply in reply_list:
+            if recv_reply[0] == '':
+                continue
 
-        for tag in tags:
-            tag_msg = recv_msg
-            for other_tag in tags:
-                if other_tag != tag:
-                    tag_msg.replace(other_tag, '')
+            tags = re.findall('(<[^>]+>)', recv_reply[0])
 
-            index = tag_msg.index(tag)
-            recv_msg = recv_msg.replace(tag, '')
+            scene_item = SceneQueueData()
+            scene_item.br['time'] = recv_reply[1]
+            scene_item.sm['render'] = 'tag:neutral'
+            scene_item.sm['offset'] = 0.0
 
-            tag = tag.lstrip('<')
-            tag = tag.rstrip('>')
-            tag = tag.split('=')
+            scene_item.expression['render'] ='neutral'
+            scene_item.expression['offset'] = 0.0
 
-            if tag[0].strip() == 'sm':
+            scene_item.pointing = {}
+            scene_item.gaze = {}
+            scene_item.emotion = {}
+            overriding = OverridingType.QUEUE
+
+            for tag in tags:
+                tag_msg = recv_msg
+                for other_tag in tags:
+                    if other_tag != tag:
+                        tag_msg.replace(other_tag, '')
+
+                index = tag_msg.index(tag)
+                recv_msg = recv_msg.replace(tag, '')
+
+                tag = tag.lstrip('<')
+                tag = tag.rstrip('>')
+                tag = tag.split('=')
+
+                if tag[0].strip() == 'sm':
+                    scene_item.sm = {}
+                    scene_item.sm['render'] = tag[1].strip()
+                    scene_item.sm['offset'] = float(index / SIZE_FOR_CHARACTER * TIME_FOR_CHARACTER)
+                elif tag[0].strip() == 'gaze':
+                    scene_item.gaze['render'] = tag[1].strip()
+                    scene_item.gaze['offset'] = float(index / SIZE_FOR_CHARACTER * TIME_FOR_CHARACTER)
+                elif tag[0].strip() == 'pointing':
+                    scene_item.pointing['render'] = tag[1].strip()
+                    scene_item.pointing['offset'] = float(index / SIZE_FOR_CHARACTER * TIME_FOR_CHARACTER)
+                elif tag[0].strip() == 'expression':
+                    scene_item.expression['render'] = tag[1].strip()
+                    scene_item.expression['offset'] = float(index / SIZE_FOR_CHARACTER * TIME_FOR_CHARACTER)
+                elif tag[0].strip() == 'sound':
+                    scene_item.sound['render'] = tag[1].strip()
+                    scene_item.sound['offset'] = float(index / SIZE_FOR_CHARACTER * TIME_FOR_CHARACTER)
+                elif tag[0].strip() == 'overriding':
+                    overriding = int(tag[1].strip())
+                elif tag[0].strip() == 'log':
+                    scene_item.log = tag[1].strip()
+
+            scene_item.say['render'] = recv_reply[0].strip()
+            scene_item.say['offset'] = 0.0
+
+            if scene_item.pointing != {}:
                 scene_item.sm = {}
-                scene_item.sm['render'] = tag[1].strip()
-                scene_item.sm['offset'] = float(index / SIZE_FOR_CHARACTER * TIME_FOR_CHARACTER)
-            elif tag[0].strip() == 'gaze':
-                scene_item.gaze['render'] = tag[1].strip()
-                scene_item.gaze['offset'] = float(index / SIZE_FOR_CHARACTER * TIME_FOR_CHARACTER)
-            elif tag[0].strip() == 'pointing':
-                scene_item.pointing['render'] = tag[1].strip()
-                scene_item.pointing['offset'] = float(index / SIZE_FOR_CHARACTER * TIME_FOR_CHARACTER)
-            elif tag[0].strip() == 'expression':
-                scene_item.expression['render'] = tag[1].strip()
-                scene_item.expression['offset'] = float(index / SIZE_FOR_CHARACTER * TIME_FOR_CHARACTER)
-            elif tag[0].strip() == 'sound':
-                scene_item.sound['render'] = tag[1].strip()
-                scene_item.sound['offset'] = float(index / SIZE_FOR_CHARACTER * TIME_FOR_CHARACTER)
-            elif tag[0].strip() == 'overriding':
-                overriding = int(tag[1].strip())
-            elif tag[0].strip() == 'log':
-                scene_item.log = tag[1].strip()
 
-        scene_item.say['render'] = recv_msg.strip()
-        scene_item.say['offset'] = 0.0
-
-        if scene_item.pointing != {}:
-            scene_item.sm = {}
-
-        if overriding == OverridingType.QUEUE:
-            self.scene_queue.put(scene_item)
-        elif overriding == OverridingType.OVERRIDE:
-            self.renderer_client.cancel_all_goals()
-            with self.scene_queue.mutex:
-                self.scene_queue.queue.clear()
-            self.scene_queue.put(scene_item)
+            if overriding == OverridingType.QUEUE:
+                self.scene_queue.put(scene_item)
+                # print scene_item
+            elif overriding == OverridingType.OVERRIDE:
+                self.renderer_client.cancel_all_goals()
+                with self.scene_queue.mutex:
+                    self.scene_queue.queue.clear()
+                self.scene_queue.put(scene_item)
 
 
     def handle_scene_queue(self):
@@ -245,6 +274,7 @@ class MotionArbiter:
                 gaze = {}
                 sound = {}
                 expression = {}
+                br = {}
                 log = ''
                 '''
 
@@ -262,6 +292,7 @@ class MotionArbiter:
                 scene_dict['sound'] = scene_item.sound
                 scene_dict['expression'] = scene_item.expression
                 scene_dict['gaze'] = scene_item.gaze
+                scene_dict['br'] = scene_item.br
 
                 # 감정은 소셜 메모리에서 읽어온다.
                 scene_dict['emotion'] = {}
@@ -288,6 +319,7 @@ class MotionArbiter:
         rospy.loginfo('\033[91m[%s]\033[0m scene rendering started...'%rospy.get_name())
         self.is_rendering = True
         self.pub_stop_speech_recognizer.publish()
+        self.pub_start_robot_speech.publish()
 
 
     def render_feedback(self, feedback):
@@ -301,6 +333,7 @@ class MotionArbiter:
             pass
         rospy.sleep(0.5)
         self.pub_start_speech_recognizer.publish()
+        self.pub_stop_robot_speech.publish()
 
 if __name__ == '__main__':
     rospy.init_node('motion_arbiter', anonymous=False)
