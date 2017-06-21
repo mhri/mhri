@@ -154,14 +154,14 @@ class MotionArbiter:
             scene_item.emotion = {}
             overriding = OverridingType.QUEUE
 
-            for tag in tags:
-                tag_msg = recv_msg
+            tag_msg =  recv_reply[0]
+            for tag in tags:                
                 for other_tag in tags:
                     if other_tag != tag:
                         tag_msg.replace(other_tag, '')
 
                 index = tag_msg.index(tag)
-                recv_msg = recv_msg.replace(tag, '')
+                tag_msg = tag_msg.replace(tag, '')
 
                 tag = tag.lstrip('<')
                 tag = tag.rstrip('>')
@@ -188,7 +188,7 @@ class MotionArbiter:
                 elif tag[0].strip() == 'log':
                     scene_item.log = tag[1].strip()
 
-            scene_item.say['render'] = recv_reply[0].strip()
+            scene_item.say['render'] = tag_msg.strip()
             scene_item.say['offset'] = 0.0
 
             if scene_item.pointing != {}:
