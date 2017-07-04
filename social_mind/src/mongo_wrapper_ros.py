@@ -61,7 +61,8 @@ if __name__ == '__main__':
     rospy.init_node('social_warehouse')
     path_param = rospy.get_param('~mind_path' , '/tmp/db')
     dbpath = path.expanduser(path_param)
-    overwrite = rospy.get_param('~overwrite', False)
+    dbpath = os.path.abspath(dbpath)
+    overwrite = rospy.get_param('~overwrite', True)
 
     if '--repair' in sys.argv:
         rospy.loginfo("Repairing database")

@@ -155,7 +155,7 @@ class MotionArbiter:
             overriding = OverridingType.QUEUE
 
             tag_msg =  recv_reply[0]
-            for tag in tags:                
+            for tag in tags:
                 for other_tag in tags:
                     if other_tag != tag:
                         tag_msg.replace(other_tag, '')
@@ -196,7 +196,17 @@ class MotionArbiter:
 
             if overriding == OverridingType.QUEUE:
                 self.scene_queue.put(scene_item)
-                # print scene_item
+            elif overriding == OverridingType.CROSS:
+                backup_item = []
+
+                while not self.scene_queue.empty():
+                    backup_item.append(self.scene_queue.get())
+                    self.scene_queue.task_done()
+
+                self.scene_queue.put(scene_item)
+                for item in backup_item:
+                    self.scene_queue.put(item)
+
             elif overriding == OverridingType.OVERRIDE:
                 self.renderer_client.cancel_all_goals()
                 with self.scene_queue.mutex:
@@ -328,9 +338,9 @@ class MotionArbiter:
     def render_done(self, state, result):
         rospy.loginfo('\033[91m[%s]\033[0m scene rendering done...'%rospy.get_name())
         self.is_rendering = False
-        rospy.sleep(1)
-        while self.is_speaking_started and not rospy.is_shutdown():
-            pass
+        # rospy.sleep(0.4)
+        # while self.is_speaking_started and not rospy.is_shutdown():
+        #     pass
         rospy.sleep(0.5)
         self.pub_start_speech_recognizer.publish()
         self.pub_stop_robot_speech.publish()

@@ -207,31 +207,34 @@ class GazeNode:
             response = self.rd_memory['social_events_memory'](req)
 
             result_data = json.loads(response.data)
-            if result_data['count'] == 0:
-                with self.lock:
-                    self.current_state = self.last_state
-                return
-            else:
-                req = ReadDataRequest()
-                req.perception_name = 'persons'
-                req.query = '{}'
-                req.data = ['~']
-                response = self.rd_memory['environmental_memory'](req)
+            try:
+                if result_data['count'] == 0:
+                    with self.lock:
+                        self.current_state = self.last_state
+                    return
+                else:
+                    req = ReadDataRequest()
+                    req.perception_name = 'persons'
+                    req.query = '{}'
+                    req.data = ['~']
+                    response = self.rd_memory['environmental_memory'](req)
 
-                ret_data = json.loads(response.data)
+                    ret_data = json.loads(response.data)
 
-                try:
-                    cmd = GazeCommand()
-                    cmd.target_point.header.frame_id = ret_data[0]['frame_id']
-                    cmd.target_point.point.x = ret_data[0]['xyz'][0]
-                    cmd.target_point.point.y = ret_data[0]['xyz'][1]
-                    cmd.target_point.point.z = ret_data[0]['xyz'][2]
-                    cmd.max_speed = 0.2
+                    try:
+                        cmd = GazeCommand()
+                        cmd.target_point.header.frame_id = ret_data[0]['frame_id']
+                        cmd.target_point.point.x = ret_data[0]['xyz'][0]
+                        cmd.target_point.point.y = ret_data[0]['xyz'][1]
+                        cmd.target_point.point.z = ret_data[0]['xyz'][2]
+                        cmd.max_speed = 0.2
 
-                    self.pub_gaze_cmd.publish(cmd)
-                    self.pub_viz_gaze_cmd.publish(cmd.target_point)
-                except KeyError:
-                    pass
+                        self.pub_gaze_cmd.publish(cmd)
+                        self.pub_viz_gaze_cmd.publish(cmd.target_point)
+                    except KeyError:
+                        pass
+            except KeyError:
+                pass
 
 if __name__ == '__main__':
     m = GazeNode()

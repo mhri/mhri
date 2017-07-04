@@ -95,7 +95,7 @@ class MemoryNode:
     def handle_read_data(self, req):
         query_result = []
         try:
-            for data in self.collections[str(req.perception_name)].find(json.loads(req.query)).sort('time', pymongo.DESCENDING):
+            for data in self.collections[str(req.perception_name)].find(json.loads(req.query)).limit(5).sort('time', pymongo.DESCENDING):
                 query_result.append(data)
         except KeyError as e:
             query_result = []
