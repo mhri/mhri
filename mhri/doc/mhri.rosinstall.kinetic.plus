@@ -1,3 +1,12 @@
 - git: {local-name: mhri, uri: "https://github.com/mhri/mhri.git"}
-- git: {local-name: mhri_msgs, uri: "https://github.com/mhri/mhri_msgs.git"}
+- git: {local-name: mhri_social_msgs, uri: "https://github.com/mhri/mhri_social_msgs.git"}
 - git: {local-name: mhri_dialog, uri: "https://github.com/mhri/mhri_dialog.git"}
+- git: {local-name: mhri_docs, uri: "https://github.com/mhri/mhri_docs.git"}
+- git: {local-name: examples_tasks, uri: "https://github.com/mhri/examples_tasks.git"}
+- git: {local-name: domain_scripts, uri: "https://github.com/mhri/domain_scripts.git"}
+- git: {local-name: examples_social_perceptions, uri: "https://github.com/mhri/examples_social_perceptions.git"}
+- git: {local-name: etri_perceptions, uri: "https://github.com/mhri/etri_perceptions.git"}
+- git: {local-name: examples_renderer, uri: "https://github.com/mhri/examples_renderer.git"}
+- git: {local-name: examples_social_robots, uri: "https://github.com/mhri/examples_social_robots.git"}
+- git: {local-name: examples_sensory_perceptions, uri: "https://github.com/mhri/examples_sensory_perceptions.git"}
+- git: {local-name: mhri_tools, uri: "https://github.com/mhri/mhri_tools.git"}

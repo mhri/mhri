@@ -25,13 +25,23 @@ Under the work
 
 To build from source, clone the latest version from this repository into your catkin workspace and compile the package using:
 
+For core...
+
+    $ cd catkin_ws/src
+    $ mkdir mhri_workspace
+    $ wstool init mhri_workspace https://raw.github.com/mhri/mhri/master/mhri/doc/mhri_core.rosinstall.kinetic.plus
+    $ cd mhri_workspace
+    $ wstool update -j8
+    $ catkin_make or catkin build
+
+For whole repository...
+
     $ cd catkin_ws/src
     $ mkdir mhri_workspace
     $ wstool init mhri_workspace https://raw.github.com/mhri/mhri/master/mhri/doc/mhri.rosinstall.kinetic.plus
     $ cd mhri_workspace
     $ wstool update -j8
     $ catkin_make or catkin build
-
 
 ## Documentation
 
